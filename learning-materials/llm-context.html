@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>大模型的上下文 · 概念学习资料</title>
+<style>
+  :root {
+    --bg: #fafaf7; --surface: #ffffff; --ink: #1f2328; --ink-2: #57606a;
+    --muted: #8b949e; --line: #e6e8eb;
+    --accent: #b14e2b; --accent-2: #2f6f5e; --accent-3: #3b4d80;
+    --code-bg: #f6f4ee;
+    --shadow: 0 1px 2px rgba(20,25,30,.04), 0 8px 24px rgba(20,25,30,.06);
+    --radius: 14px; --maxw: 960px;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--ink); margin: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px; line-height: 1.75; }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 56px 28px 96px; }
+  h1 { font-size: 40px; letter-spacing: -0.5px; margin: 0 0 8px; }
+  h2 { font-size: 24px; margin: 48px 0 14px; padding-bottom: 8px;
+       border-bottom: 1px solid var(--line); }
+  h3 { font-size: 18px; margin: 24px 0 8px; color: var(--accent); }
+  p { margin: 12px 0; }
+  .tagline { color: var(--ink-2); font-size: 17px; margin: 0 0 28px; }
+  .glance { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px; margin: 24px 0 36px; }
+  .glance .card { background: var(--surface); border: 1px solid var(--line);
+                  border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); }
+  .glance .card .k { color: var(--muted); font-size: 12px; margin-bottom: 4px;
+                     letter-spacing: .04em; }
+  .glance .card .v { color: var(--ink); font-size: 15px; line-height: 1.5; }
+  figure { margin: 24px 0; background: var(--surface); border: 1px solid var(--line);
+           border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
+  figcaption { color: var(--muted); font-size: 13px; margin-top: 10px;
+               text-align: center; }
+  table { width: 100%; border-collapse: collapse; margin: 18px 0; background: var(--surface);
+          border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+  th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--line); }
+  th { background: #f1ede4; color: var(--ink); font-weight: 600; }
+  tr:last-child td { border-bottom: 0; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 12px;
+        padding: 16px; overflow-x: auto; font-size: 13.5px; line-height: 1.6; }
+  code { font-family: "JetBrains Mono", Consolas, ui-monospace, monospace; }
+  details { background: var(--surface); border: 1px solid var(--line);
+            border-radius: var(--radius); padding: 14px 18px; margin: 12px 0;
+            box-shadow: var(--shadow); }
+  summary { cursor: pointer; font-weight: 600; color: var(--ink); }
+  ul, ol { padding-left: 22px; }
+  li { margin: 6px 0; }
+  .footer { color: var(--muted); font-size: 12px; margin-top: 64px;
+            border-top: 1px solid var(--line); padding-top: 18px;
+            text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>大模型的上下文（Context）</h1>
+  <p class="tagline">模型在一次推理里"看到的全部输入"——系统提示、对话历史、工具定义、检索结果，都在这里。</p>
+
+  <div class="glance">
+    <div class="card"><div class="k">类比</div><div class="v">考场上你面前的试卷与草稿纸</div></div>
+    <div class="card"><div class="k">本质</div><div class="v">一次推理的全部输入文本</div></div>
+    <div class="card"><div class="k">关键约束</div><div class="v">上下文窗口（有上限的 token 数）</div></div>
+    <div class="card"><div class="k">最易混淆</div><div class="v">≠ 长期记忆</div></div>
+  </div>
+
+  <h2>TL;DR</h2>
+  <ul>
+    <li>上下文 = 一次调用里喂给模型的全部内容。</li>
+    <li>它的长度上限叫"上下文窗口"，按 token 计量。</li>
+    <li>上下文工程的本质，是把<strong>对的内容放在对的位置</strong>。</li>
+  </ul>
+
+  <h3>为什么这件事重要</h3>
+  <p>模型看不到它"上下文"以外的东西。模型表现得聪明还是糊涂，几乎不取决于"它有多强"，而取决于"你喂它的上下文有多少、有多准"。上下文工程（context engineering）正在取代 prompt engineering，成为 2025 年之后 AI 应用开发者的核心技能。</p>
+
+  <h2>1 · 心智模型</h2>
+  <figure>
+    <svg viewBox="0 0 680 320" xmlns="http://www.w3.org/2000/svg">
+      <rect x="40" y="60" width="600" height="220" rx="18"
+            fill="#ffffff" stroke="#3b4d80" stroke-width="2"/>
+      <text x="340" y="42" text-anchor="middle" font-size="14"
+            fill="#3b4d80" font-weight="700">上下文窗口（Context Window）</text>
+      <text x="340" y="86" text-anchor="middle" font-size="12" fill="#57606a">例：128k tokens 上限</text>
+
+      <g font-size="13" font-family="-apple-system, sans-serif">
+        <rect x="55" y="100" width="570" height="32" rx="6" fill="#fbe8e0" stroke="#b14e2b"/>
+        <text x="68" y="121" fill="#1f2328">system: 你是严谨的助教，用中文回答...</text>
+
+        <rect x="55" y="138" width="570" height="32" rx="6" fill="#e7eaf6" stroke="#3b4d80"/>
+        <text x="68" y="159" fill="#1f2328">user: 帮我看看这段代码哪里有 bug？</text>
+
+        <rect x="55" y="176" width="570" height="32" rx="6" fill="#e7f1ec" stroke="#2f6f5e"/>
+        <text x="68" y="197" fill="#1f2328">assistant: 我看一下，先读 main.py...</text>
+
+        <rect x="55" y="214" width="280" height="50" rx="6" fill="#f6f4ee" stroke="#8b949e"/>
+        <text x="68" y="234" fill="#1f2328">tool result:</text>
+        <text x="68" y="252" fill="#57606a" font-size="11">[File] main.py 第 14 行: ...</text>
+
+        <rect x="345" y="214" width="280" height="50" rx="6" fill="#f6f4ee" stroke="#8b949e"/>
+        <text x="358" y="234" fill="#1f2328">retrieved:</text>
+        <text x="358" y="252" fill="#57606a" font-size="11">[Doc] "项目 README 概要" ...</text>
+      </g>
+
+      <text x="635" y="295" text-anchor="end" font-size="11" fill="#8b949e">token 1 ──────────── token N</text>
+    </svg>
+    <figcaption>上下文窗口 = 你给模型的"一整页卷子"。系统提示、对话、工具结果、外部检索的结果，全都摊在同一页。</figcaption>
+  </figure>
+
+  <h2>2 · 解剖：上下文里到底装了什么</h2>
+  <ul>
+    <li><strong>System prompt</strong>：给模型的"人设 / 规则 / 输出格式"，通常固定。</li>
+    <li><strong>对话历史</strong>：用户问过的、模型答过的，按时间顺序排列。</li>
+    <li><strong>工具定义</strong>：让模型知道有哪些工具可用、各需要什么参数。</li>
+    <li><strong>工具结果</strong>：之前工具调用的真实返回值，会被回填进上下文。</li>
+    <li><strong>检索结果（RAG）</strong>：从外部知识库挑出来的相关片段，往往是当前任务最关键的信息。</li>
+    <li><strong>Few-shot 示例</strong>：放在上下文里的"示范问答"，用来引导风格或格式。</li>
+    <li><strong>缓存标识</strong>：API 层面用来告诉服务端"前面的内容没变，请复用缓存"。</li>
+  </ul>
+
+  <h2>3 · 运作机制</h2>
+  <ol>
+    <li><strong>采集</strong>：把这一次对话所需的全部信息收集起来——记忆、检索、工具结果都算。</li>
+    <li><strong>排序</strong>：把"最相关 / 最新 / 最要紧"的内容放上下文靠前的位置（首因效应让模型更"听"开头）。</li>
+    <li><strong>压缩</strong>：超长时用摘要、删除、引用替代等方式瘦身；不重要的早期对话可丢弃。</li>
+    <li><strong>校验</strong>：交付前确认上下文没拼错（比如角色标签、JSON 结构）。</li>
+    <li><strong>输入模型</strong>：一次性喂入。模型只看见这"一张卷子"，看不见其他。</li>
+  </ol>
+  <p>研究界有一句流行说法："<em>Garbage in, garbage out</em>" 在大模型时代有一个更具体的版本："<strong>你喂什么，模型就答什么</strong>"。</p>
+
+  <h2>4 · 对比与误区</h2>
+  <table>
+    <thead>
+      <tr><th></th><th>上下文 (Context)</th><th>长期记忆 (Memory)</th><th>RAG（检索增强）</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>存在位置</td><td>这一次调用的输入里</td><td>外部存储（如数据库）</td><td>外部知识库</td></tr>
+      <tr><td>是否每次都喂</td><td>是</td><td>否，按需检索后注入上下文</td><td>否，按需检索后注入上下文</td></tr>
+      <tr><td>能跨会话吗</td><td>不能</td><td>能</td><td>能</td></tr>
+      <tr><td>成本</td><td>每次付 token 费</td><td>存储 + 检索</td><td>向量库 + 检索</td></tr>
+      <tr><td>主要作用</td><td>让模型当下"看到"</td><td>让模型跨次"记得"</td><td>让模型"查得到"</td></tr>
+    </tbody>
+  </table>
+
+  <h3>常见误区</h3>
+  <ul>
+    <li><strong>"上下文越长越好"。</strong>不一定。研究普遍发现"Lost in the Middle"（中间内容最易被忽略）：写得长 ≠ 用得着。</li>
+    <li><strong>"上下文 = 记忆"。</strong>错。上下文是一次性的输入；记忆是跨多次会话持久化的状态。</li>
+    <li><strong>"上下文窗口 128k 就够用"。</strong>实际上，模型的"有效"上下文往往只有声称值的 60%–80%，超出后质量明显下降。</li>
+    <li><strong>"调好 prompt 就万事大吉"。</strong>单靠 prompt 修修补补很快撞墙；上下文工程是把"送进模型前的那一段工程"当成独立学科来做。</li>
+  </ul>
+
+  <h2>5 · 代码级一瞥（构造一次最小请求的上下文）</h2>
+  <pre><code>messages = [
+    {"role": "system", "content": "你是助教，回答要简洁。"},
+    {"role": "user",   "content": user_question},
+]
+
+# 可选：检索后把检索到的资料插在用户问题之前
+if retrieved:
+    messages.insert(1, {
+        "role": "system",
+        "content": "以下是与问题相关的资料：\n" + "\n".join(retrieved)
+    })
+
+# 可选：把历史对话追加到末尾
+messages += session_history
+
+response = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=messages,        # &lt;-- 这就是"上下文"
+    temperature=0.2,
+)</code></pre>
+  <p>注意：这里没有"魔法"。模型好不好，几乎完全取决于 <code>messages</code> 这个列表里装的是什么、装得对不对。</p>
+
+  <h2>6 · Recap & 自检</h2>
+  <details><summary>1. 大模型能"看见"没放进上下文的内容吗？</summary>不能。一次推理只有"上下文"这一份输入；其它都看不见。</details>
+  <details><summary>2. 上下文窗口 128k 是不是表示能稳定用满 128k？</summary>不是。实际表现往往在声称值的 60%–80%，更长的部分会出现明显遗忘、答错、答非所问。</details>
+  <details><summary>3. RAG 和"长上下文"哪种更好？</summary>各有所长。RAG 适合"精确查找某条事实"；长上下文适合"整段文本需要被理解"。一般经验：能用 RAG 就别把整个知识库塞进上下文，又贵又慢。</details>
+  <details><summary>4. 上下文和记忆的区别是什么？</summary>上下文 = 这一次调用的全部输入；记忆 = 跨会话持久化的状态，检索后会注入上下文。两者协作，不要混为一谈。</details>
+  <details><summary>5. "Lost in the Middle" 是什么意思？</summary>研究发现大模型对上下文开头和结尾的信息利用最好，中间段最易被忽略。所以"关键内容放首尾"是常用技巧。</details>
+  <details><summary>6. 为什么说"上下文工程"比"调 prompt"更重要？</summary>因为 prompt 只是上下文的一小部分；上下文工程是对整个输入序列的位置、内容、长度、结构的系统化设计，影响更根本。</details>
+
+  <h2>7 · 延伸阅读</h2>
+  <ul>
+    <li><em>Lost in the Middle</em>（Liu et al., 2023，arXiv）</li>
+    <li>OpenAI / Anthropic 官方文档中关于 context window 与 prompt caching 的章节</li>
+    <li>Phil Schmid 的"context engineering"系列博文</li>
+    <li>LangChain、LlamaIndex 等框架中关于 retrieval 的文档</li>
+    <li>Anthropic《Effective context engineering for AI agents》</li>
+  </ul>
+
+  <div class="footer">Generated by <code>concept-learning-material</code> skill · 2026-09</div>
+
+</div>
+</body>
+</html>
