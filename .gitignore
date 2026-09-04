@@ -45,3 +45,50 @@ Desktop.ini
 *.log
 *.tmp
 .cache/
+
+# ===== 安全 / 敏感信息（防止误提交 API Key / 凭据）=====
+# 环境变量与本地配置
+.env
+.env.*
+!.env.example
+.envrc
+
+# 密钥、证书、PEM / KEY / PFX 文件
+*.pem
+*.key
+*.cer
+*.crt
+*.pfx
+*.p12
+*.keystore
+
+# 凭据文件
+credentials.*
+credentials.*
+secrets.*
+*_rsa
+*_rsa.pub
+authorized_keys
+id_rsa
+id_dsa
+id_ed25519
+known_hosts
+
+# 云 / 数据库凭据
+*.gpg
+*.pgp
+aws/credentials
+aws/config
+gcloud-credentials.json
+firebase-credentials.json
+service-account*.json
+gha-creds-*.json
+
+# WorkBuddy / AI 工具产生的本地状态（可放仓库外，避免 token 漏到远程）
+.workbuddy/memory/
+
+# 历史 / 备份
+*.bak
+*.old
+*.swp
+*.orig
