@@ -20,8 +20,10 @@
     font-size: 16px; line-height: 1.75; }
   .wrap { max-width: var(--maxw); margin: 0 auto; padding: 56px 28px 96px; }
   h1 { font-size: 40px; letter-spacing: -0.5px; margin: 0 0 8px; }
-  h2 { font-size: 24px; margin: 48px 0 14px; padding-bottom: 8px;
+  h2 { font-size: 22px; margin: 48px 0 14px; padding-bottom: 8px;
        border-bottom: 1px solid var(--line); }
+  h2 .num { color: var(--muted); font-weight: 500; margin-right: 10px;
+            letter-spacing: .04em; }
   h3 { font-size: 18px; margin: 24px 0 8px; color: var(--accent); }
   p { margin: 12px 0; }
   .tagline { color: var(--ink-2); font-size: 17px; margin: 0 0 28px; }
@@ -53,161 +55,219 @@
   .footer { color: var(--muted); font-size: 12px; margin-top: 64px;
             border-top: 1px solid var(--line); padding-top: 18px;
             text-align: center; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(177,78,43,.3); }
+  a:hover { border-bottom-color: var(--accent); }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <h1>大模型的上下文（Context）</h1>
-  <p class="tagline">模型在一次推理里"看到的全部输入"——系统提示、对话历史、工具定义、检索结果，都在这里。</p>
+<h1>大模型的上下文</h1>
+<p class="tagline">每一轮请求，模型"看得见的全部输入"——决定了它这一次表现得像不像个聪明人。</p>
 
-  <div class="glance">
-    <div class="card"><div class="k">类比</div><div class="v">考场上你面前的试卷与草稿纸</div></div>
-    <div class="card"><div class="k">本质</div><div class="v">一次推理的全部输入文本</div></div>
-    <div class="card"><div class="k">关键约束</div><div class="v">上下文窗口（有上限的 token 数）</div></div>
-    <div class="card"><div class="k">最易混淆</div><div class="v">≠ 长期记忆</div></div>
-  </div>
+<div class="glance">
+  <div class="card"><div class="k">类比</div><div class="v">一段会被塞进模型的剧本</div></div>
+  <div class="card"><div class="k">本质</div><div class="v">一个滑动窗口里塞好的 token 序列</div></div>
+  <div class="card"><div class="k">四类消息</div><div class="v">system · user · assistant · tool</div></div>
+  <div class="card"><div class="k">关键限制</div><div class="v">窗口大小 + Lost in the Middle</div></div>
+  <div class="card"><div class="k">核心做法</div><div class="v">Context Engineering</div></div>
+</div>
 
-  <h2>TL;DR</h2>
-  <ul>
-    <li>上下文 = 一次调用里喂给模型的全部内容。</li>
-    <li>它的长度上限叫"上下文窗口"，按 token 计量。</li>
-    <li>上下文工程的本质，是把<strong>对的内容放在对的位置</strong>。</li>
-  </ul>
+<h2><span class="num">1 ·</span>学习目标</h2>
+<ul>
+  <li>能 <b>说出</b> 什么是大模型的"上下文"，并把它和"提示词"区分开。</li>
+  <li>能 <b>画出来</b> 一次请求里上下文是如何被组装出来的。</li>
+  <li>能 <b>解释</b>"Lost in the Middle"现象为什么不能忽视。</li>
+  <li>能 <b>应用</b> 至少 3 种 Context Engineering 的常见手法。</li>
+  <li>能 <b>避开</b> 把"上下文"误用成"长期记忆"的常见坑。</li>
+</ul>
 
-  <h3>为什么这件事重要</h3>
-  <p>模型看不到它"上下文"以外的东西。模型表现得聪明还是糊涂，几乎不取决于"它有多强"，而取决于"你喂它的上下文有多少、有多准"。上下文工程（context engineering）正在取代 prompt engineering，成为 2025 年之后 AI 应用开发者的核心技能。</p>
+<h2><span class="num">2 ·</span>核心问题</h2>
+<ol>
+  <li>"上下文"和"提示词"到底是不是一个东西？</li>
+  <li>一次 LLM 请求里，模型实际看到的是哪些 token？</li>
+  <li>为什么"context window"不能无限大？</li>
+  <li>为什么把全部历史塞进去，模型反而表现变差？</li>
+  <li>想让 Agent 在长任务里不丢信息，"上下文工程"到底在做什么？</li>
+</ol>
 
-  <h2>1 · 心智模型</h2>
-  <figure>
-    <svg viewBox="0 0 680 320" xmlns="http://www.w3.org/2000/svg">
-      <rect x="40" y="60" width="600" height="220" rx="18"
-            fill="#ffffff" stroke="#3b4d80" stroke-width="2"/>
-      <text x="340" y="42" text-anchor="middle" font-size="14"
-            fill="#3b4d80" font-weight="700">上下文窗口（Context Window）</text>
-      <text x="340" y="86" text-anchor="middle" font-size="12" fill="#57606a">例：128k tokens 上限</text>
+<h2><span class="num">3 ·</span>结构化解释</h2>
 
-      <g font-size="13" font-family="-apple-system, sans-serif">
-        <rect x="55" y="100" width="570" height="32" rx="6" fill="#fbe8e0" stroke="#b14e2b"/>
-        <text x="68" y="121" fill="#1f2328">system: 你是严谨的助教，用中文回答...</text>
+<h3>3.1 · 心智模型：一段被装订好的剧本</h3>
+<p>把"上下文"想成<em>演员上台前拿到的那份剧本</em>：</p>
+<ul>
+  <li>剧本<em>只装订当时的情况</em>——它不写"上次发生了什么"，除非有人把它写进页。</li>
+  <li>剧本<em>每一页都要钱</em>——总字数（token）一旦超量，模型要么截断、要么压缩。</li>
+  <li>剧本<em>前后会被看得最清楚，中间容易糊</em>——这一点是很多灵异 bug 的来源。</li>
+</ul>
 
-        <rect x="55" y="138" width="570" height="32" rx="6" fill="#e7eaf6" stroke="#3b4d80"/>
-        <text x="68" y="159" fill="#1f2328">user: 帮我看看这段代码哪里有 bug？</text>
+<figure>
+  <svg viewBox="0 0 680 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="LLM 上下文的组装">
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
+      </marker>
+    </defs>
 
-        <rect x="55" y="176" width="570" height="32" rx="6" fill="#e7f1ec" stroke="#2f6f5e"/>
-        <text x="68" y="197" fill="#1f2328">assistant: 我看一下，先读 main.py...</text>
+    <!-- left sources -->
+    <rect x="20" y="20"  width="170" height="44" rx="10" fill="#fdebe2" stroke="#b14e2b"/>
+    <text x="105" y="48" text-anchor="middle" font-size="13" fill="#1f2328">系统提示 (system)</text>
+    <rect x="20" y="80"  width="170" height="44" rx="10" fill="#fdebe2" stroke="#b14e2b"/>
+    <text x="105" y="108" text-anchor="middle" font-size="13" fill="#1f2328">当前用户输入</text>
+    <rect x="20" y="140" width="170" height="44" rx="10" fill="#fdebe2" stroke="#b14e2b"/>
+    <text x="105" y="168" text-anchor="middle" font-size="13" fill="#1f2328">历史对话摘要</text>
+    <rect x="20" y="200" width="170" height="44" rx="10" fill="#fdebe2" stroke="#b14e2b"/>
+    <text x="105" y="228" text-anchor="middle" font-size="13" fill="#1f2328">检索结果 (RAG)</text>
+    <rect x="20" y="260" width="170" height="44" rx="10" fill="#fdebe2" stroke="#b14e2b"/>
+    <text x="105" y="288" text-anchor="middle" font-size="13" fill="#1f2328">工具返回值</text>
 
-        <rect x="55" y="214" width="280" height="50" rx="6" fill="#f6f4ee" stroke="#8b949e"/>
-        <text x="68" y="234" fill="#1f2328">tool result:</text>
-        <text x="68" y="252" fill="#57606a" font-size="11">[File] main.py 第 14 行: ...</text>
+    <!-- middle tokenizer -->
+    <rect x="240" y="130" width="200" height="60" rx="10" fill="#f1ede4" stroke="#8b949e"/>
+    <text x="340" y="160" text-anchor="middle" font-size="14" font-weight="600" fill="#1f2328">Tokenize + 组装</text>
+    <text x="340" y="180" text-anchor="middle" font-size="12" fill="#57606a">按顺序拼成一个 token 序列</text>
 
-        <rect x="345" y="214" width="280" height="50" rx="6" fill="#f6f4ee" stroke="#8b949e"/>
-        <text x="358" y="234" fill="#1f2328">retrieved:</text>
-        <text x="358" y="252" fill="#57606a" font-size="11">[Doc] "项目 README 概要" ...</text>
-      </g>
+    <!-- right window -->
+    <rect x="490" y="100" width="170" height="120" rx="12" fill="#ffffff" stroke="#1f2328"/>
+    <text x="575" y="126" text-anchor="middle" font-size="14" font-weight="600" fill="#1f2328">Context Window</text>
+    <text x="575" y="148" text-anchor="middle" font-size="12" fill="#57606a">(例如 8K / 32K / 200K)</text>
+    <rect x="500" y="160" width="150" height="48" rx="8" fill="#e7f0ec" stroke="#2f6f5e"/>
+    <text x="575" y="189" text-anchor="middle" font-size="12" fill="#1f2328">模型看见的全部</text>
 
-      <text x="635" y="295" text-anchor="end" font-size="11" fill="#8b949e">token 1 ──────────── token N</text>
-    </svg>
-    <figcaption>上下文窗口 = 你给模型的"一整页卷子"。系统提示、对话、工具结果、外部检索的结果，全都摊在同一页。</figcaption>
-  </figure>
+    <!-- arrows -->
+    <path d="M190,42  L240,148" stroke="#57606a" stroke-width="2" marker-end="url(#arr)" fill="none"/>
+    <path d="M190,102 L240,156" stroke="#57606a" stroke-width="2" marker-end="url(#arr)" fill="none"/>
+    <path d="M190,162 L240,164" stroke="#57606a" stroke-width="2" marker-end="url(#arr)" fill="none"/>
+    <path d="M190,222 L240,172" stroke="#57606a" stroke-width="2" marker-end="url(#arr)" fill="none"/>
+    <path d="M190,282 L240,180" stroke="#57606a" stroke-width="2" marker-end="url(#arr)" fill="none"/>
+    <path d="M440,160 L490,160" stroke="#57606a" stroke-width="2" marker-end="url(#arr)" fill="none"/>
+  </svg>
+  <figcaption>一次 LLM 请求里"上下文"就是这五类信息按顺序组装成的 token 序列，丢进窗口里。</figcaption>
+</figure>
 
-  <h2>2 · 解剖：上下文里到底装了什么</h2>
-  <ul>
-    <li><strong>System prompt</strong>：给模型的"人设 / 规则 / 输出格式"，通常固定。</li>
-    <li><strong>对话历史</strong>：用户问过的、模型答过的，按时间顺序排列。</li>
-    <li><strong>工具定义</strong>：让模型知道有哪些工具可用、各需要什么参数。</li>
-    <li><strong>工具结果</strong>：之前工具调用的真实返回值，会被回填进上下文。</li>
-    <li><strong>检索结果（RAG）</strong>：从外部知识库挑出来的相关片段，往往是当前任务最关键的信息。</li>
-    <li><strong>Few-shot 示例</strong>：放在上下文里的"示范问答"，用来引导风格或格式。</li>
-    <li><strong>缓存标识</strong>：API 层面用来告诉服务端"前面的内容没变，请复用缓存"。</li>
-  </ul>
+<h3>3.2 · 组成解剖</h3>
+<p>一份上下文通常由 4 类<em>角色</em>组成：</p>
+<table>
+<thead><tr><th>角色</th><th>用途</th><th>谁写</th><th>稳定性</th></tr></thead>
+<tbody>
+<tr><td><code>system</code></td><td>给模型"我是谁、我要遵守什么规则"</td><td>开发者</td><td>几乎不变</td></tr>
+<tr><td><code>user</code></td><td>当前轮的用户问题</td><td>用户</td><td>每轮变</td></tr>
+<tr><td><code>assistant</code></td><td>历史轮模型自己说过的话</td><td>模型</td><td>每轮追加</td></tr>
+<tr><td><code>tool</code></td><td>工具调用返回值（如搜索结果）</td><td>外部系统</td><td>按需插入</td></tr>
+</tbody>
+</table>
+<p><b>system 不是 prompt</b>。很多产品把 system 和 user 混在一起描述，实际会让模型很困惑。System 是"身份+规则+输出格式"，user 是"这一次要问什么"。</p>
 
-  <h2>3 · 运作机制</h2>
-  <ol>
-    <li><strong>采集</strong>：把这一次对话所需的全部信息收集起来——记忆、检索、工具结果都算。</li>
-    <li><strong>排序</strong>：把"最相关 / 最新 / 最要紧"的内容放上下文靠前的位置（首因效应让模型更"听"开头）。</li>
-    <li><strong>压缩</strong>：超长时用摘要、删除、引用替代等方式瘦身；不重要的早期对话可丢弃。</li>
-    <li><strong>校验</strong>：交付前确认上下文没拼错（比如角色标签、JSON 结构）。</li>
-    <li><strong>输入模型</strong>：一次性喂入。模型只看见这"一张卷子"，看不见其他。</li>
-  </ol>
-  <p>研究界有一句流行说法："<em>Garbage in, garbage out</em>" 在大模型时代有一个更具体的版本："<strong>你喂什么，模型就答什么</strong>"。</p>
+<h3>3.3 · 运作机制（按步骤展开）</h3>
+<ol>
+  <li><b>收集</b>：把 system、固定指令、用户输入、历史摘要、检索片段、工具结果排好序。</li>
+  <li><b>Tokenize</b>：所有内容被切成一个 token 序列（常见词一个 token，汉字一般 1~2 字一个 token）。</li>
+  <li><b>截断或压缩</b>：若超过窗口，常见策略是"<em>保留 system + 最近 N 轮 + 压缩中间</em>"。</li>
+  <li><b>送进模型</b>：模型一次性看到这段序列，自回归地输出新 token。</li>
+  <li><b>回写</b>：本轮的输出会被回写到历史，作为下一轮 assistant 消息的一部分。</li>
+</ol>
 
-  <h2>4 · 一个具体的应用场景</h2>
-  <p><strong>场景：为客户支持 Agent 装配一份"可用的 Context"。</strong></p>
-  <p>假设你做了一套电商客服 Agent，用户问"我上周买的鞋还没到，怎么回事？"。Agent 必须从一堆原始数据里拼出"能答好这道题"的 Context，否则就只能给空话。下面是装配过程：</p>
-  <ol>
-    <li><strong>系统提示</strong>：写清"你是电商客服、语气要专业、不可编造订单状态"。这一段几乎所有 Agent 都一样，可以缓存。</li>
-    <li><strong>用户消息</strong>：原样放进 Context，作为 user 角色。</li>
-    <li><strong>检索结果</strong>：用用户的订单号去订单库查状态（用 RAG / SQL 工具），把结果塞进 Context 的第一个 <code>system</code> 槽里——这样 LLM 第一眼就看到。</li>
-    <li><strong>物流查询工具</strong>：调工具拿到最新物流轨迹，把轨迹 JSON 摘要（而不是原始 JSON）放进 Context。</li>
-    <li><strong>历史对话</strong>：如果这是后续问题，把过去几轮对话拼在末尾；最早的太远就丢掉。</li>
-    <li><strong>Few-shot 示例</strong>：在 Context 中段加一个"用户问物流，客服应该如何回答"的示例，只放一条，避免占满上下文。</li>
-  </ol>
-  <p>这六步构成一次完整的"Context 装配"。注意第 3、4 步是按"与当前问题的相关性"排序的——物流状态是最关键的，所以放在 LLM 最容易注意到的位置。这就是"上下文工程"。</p>
+<h3>3.4 · 为什么这件事重要</h3>
+<p>因为决定 LLM 表现的，从来不是"参数量大不大"，而是<em>"这一轮的上下文选得好不好"</em>。同样一个 GPT，把"商品退货政策"塞到 system 里、再加上一句"顾客原话如下"，回答质量就完全不一样。<em>Context Engineering（上下文工程）</em>就是把这套手艺抽出来：当窗口有限、历史很长、知识会变的时候，设计一个能稳定拼出好上下文的流程。</p>
 
-  <h2>5 · 对比与误区</h2>
-  <table>
-    <thead>
-      <tr><th></th><th>上下文 (Context)</th><th>长期记忆 (Memory)</th><th>RAG（检索增强）</th></tr>
-    </thead>
-    <tbody>
-      <tr><td>存在位置</td><td>这一次调用的输入里</td><td>外部存储（如数据库）</td><td>外部知识库</td></tr>
-      <tr><td>是否每次都喂</td><td>是</td><td>否，按需检索后注入上下文</td><td>否，按需检索后注入上下文</td></tr>
-      <tr><td>能跨会话吗</td><td>不能</td><td>能</td><td>能</td></tr>
-      <tr><td>成本</td><td>每次付 token 费</td><td>存储 + 检索</td><td>向量库 + 检索</td></tr>
-      <tr><td>主要作用</td><td>让模型当下"看到"</td><td>让模型跨次"记得"</td><td>让模型"查得到"</td></tr>
-    </tbody>
-  </table>
-
-  <h3>常见误区</h3>
-  <ul>
-    <li><strong>"上下文越长越好"。</strong>不一定。研究普遍发现"Lost in the Middle"（中间内容最易被忽略）：写得长 ≠ 用得着。</li>
-    <li><strong>"上下文 = 记忆"。</strong>错。上下文是一次性的输入；记忆是跨多次会话持久化的状态。</li>
-    <li><strong>"上下文窗口 128k 就够用"。</strong>实际上，模型的"有效"上下文往往只有声称值的 60%–80%，超出后质量明显下降。</li>
-    <li><strong>"调好 prompt 就万事大吉"。</strong>单靠 prompt 修修补补很快撞墙；上下文工程是把"送进模型前的那一段工程"当成独立学科来做。</li>
-  </ul>
-
-  <h2>6 · 代码级一瞥（构造一次最小请求的上下文）</h2>
-  <pre><code>messages = [
-    {"role": "system", "content": "你是助教，回答要简洁。"},
-    {"role": "user",   "content": user_question},
+<h3>3.5 · 代码级一瞥（构造一次"最小合规"的上下文）</h3>
+<pre><code>messages = [
+    {"role": "system",
+     "content": "你是电商客服助理。退货政策：7 天内可退、'
+                '生鲜除外。每轮只能调用一个工具。"},
+    {"role": "user",
+     "content": "我 5 天前买的芒果烂了，能退吗？"},
+    # —— 历史对话被压成一条摘要塞进去，不放原文 ——
+    {"role": "assistant", "content": "[摘要] 用户曾因物流延迟抱怨一次。"},
+    # —— 工具调用结果也属于上下文 ——
+    {"role": "tool", "tool_call_id": "t1",
+     "content": '{"订单号": "A8821", "商品": "芒果 1kg", '
+                 '"下单时间": "5 天前 10:24"}'},
 ]
+</code></pre>
+<p>这一段里你能看到三件事：</p>
+<ul>
+  <li><em>system 写身份和规则</em>，短而稳定。</li>
+  <li><em>历史对话被"摘要"而不是原文</em>，留给新内容的空间才大。</li>
+  <li><em>工具的原始返回是 JSON</em>，模型读得懂，但占字数。</li>
+</ul>
 
-# 可选：检索后把检索到的资料插在用户问题之前
-if retrieved:
-    messages.insert(1, {
-        "role": "system",
-        "content": "以下是与问题相关的资料：\n" + "\n".join(retrieved)
-    })
+<h2><span class="num">4 ·</span>应用案例：给一个电商客服 Agent 装 Context</h2>
+<p><b>场景</b>：你做了个电商客服 Agent，每天要回答上千名顾客。其中不少问题需要看"订单状态"或"产品手册"才能答。纯拼一个超长 prompt，模型回答了一半开始胡说。</p>
+<p><b>你要做的，是给这个 Agent 设计一个"<em>上下文拼装线</em>"：</b></p>
+<ol>
+  <li><b>入口</b>：用户进来一句话——"我买的芒果烂了"。</li>
+  <li><b>工具调用</b>：Agent 调 <code>order_query(user_id)</code>，查到 5 天前下单的 A8821。</li>
+  <li><b>检索</b>：把"芒果 烂了 退货"丢去知识库检索，命中了一段"水果类售后 3 条"——这是 RAG。</li>
+  <li><b>上下文拼装</b>：
+    <ol>
+      <li>system：你定义的身份与"只在有权资料下作答"的规则。</li>
+      <li>tools：订单详情 + RAG 片段。</li>
+      <li>user：原话。</li>
+      <li>短期摘要：用户最近 3 条对话的摘要。</li>
+    </ol>
+  </li>
+  <li><b>生成</b>：模型基于这一组合上下文，给出"可以退，我已发起退款，预计 1~3 个工作日"。</li>
+  <li><b>落库</b>：把这一轮的对话、订单、退款指令写回数据库，供下次复用。</li>
+</ol>
+<p><b>结果</b>：原本"十分钟糊一句"的 Agent，现在能在一个 8K 的小窗口里精确回答，因为它每一轮只看见<em>应该看见的</em>那些东西。</p>
 
-# 可选：把历史对话追加到末尾
-messages += session_history
+<h2><span class="num">5 ·</span>概念辨析</h2>
 
-response = client.chat.completions.create(
-    model="gpt-4o-mini",
-    messages=messages,        # &lt;-- 这就是"上下文"
-    temperature=0.2,
-)</code></pre>
-  <p>注意：这里没有"魔法"。模型好不好，几乎完全取决于 <code>messages</code> 这个列表里装的是什么、装得对不对。</p>
+<h3>5.1 · Context vs Prompt vs Memory</h3>
+<table>
+<thead><tr><th>维度</th><th>Context（上下文）</th><th>Prompt（提示词）</th><th>Memory（记忆）</th></tr></thead>
+<tbody>
+<tr><td>范围</td><td>这一次模型看见的全部</td><td>你写给模型的那一句话或一段话</td><td>跨会话、跨请求持久化的信息</td></tr>
+<tr><td>时间</td><td>单次请求</td><td>单次请求</td><td>长期</td></tr>
+<tr><td>谁来写</td><td>系统（apps/orchestrator）</td><td>人或开发者</td><td>模型与系统共同沉淀</td></tr>
+<tr><td>可被裁剪</td><td>是（摘要、检索、截断）</td><td>是（重写、压缩）</td><td>需要专门存储</td></tr>
+</tbody>
+</table>
 
-  <h2>7 · Recap & 自检</h2>
-  <details><summary>1. 大模型能"看见"没放进上下文的内容吗？</summary>不能。一次推理只有"上下文"这一份输入；其它都看不见。</details>
-  <details><summary>2. 上下文窗口 128k 是不是表示能稳定用满 128k？</summary>不是。实际表现往往在声称值的 60%–80%，更长的部分会出现明显遗忘、答错、答非所问。</details>
-  <details><summary>3. RAG 和"长上下文"哪种更好？</summary>各有所长。RAG 适合"精确查找某条事实"；长上下文适合"整段文本需要被理解"。一般经验：能用 RAG 就别把整个知识库塞进上下文，又贵又慢。</details>
-  <details><summary>4. 上下文和记忆的区别是什么？</summary>上下文 = 这一次调用的全部输入；记忆 = 跨会话持久化的状态，检索后会注入上下文。两者协作，不要混为一谈。</details>
-  <details><summary>5. "Lost in the Middle" 是什么意思？</summary>研究发现大模型对上下文开头和结尾的信息利用最好，中间段最易被忽略。所以"关键内容放首尾"是常用技巧。</details>
-  <details><summary>6. 为什么说"上下文工程"比"调 prompt"更重要？</summary>因为 prompt 只是上下文的一小部分；上下文工程是对整个输入序列的位置、内容、长度、结构的系统化设计，影响更根本。</details>
+<h3>5.2 · 常见误区</h3>
+<ul>
+  <li><b>"把上下文当成数据库"</b> — 上下文是一次性场景，不是存东西的地方；想跨会话记住，请用 Memory。</li>
+  <li><b>"上下文越长越好"</b> — 研究（Lost in the Middle, 2023）显示，模型在长上下文中段最容易丢信息，关键内容要放<em>开头或结尾</em>。</li>
+  <li><b>"system 就是 prompt"</b> — System 写身份和规则；user 写问题；混在一起会让模型"不知道该听谁的"。</li>
+  <li><b>"简单任务也要重设计"</b> — Context Engineering 不等于"塞满"，对"把这句话翻译成法语"反而有害。</li>
+</ul>
 
-  <h2>8 · 延伸阅读（可核查）</h2>
-  <ul>
-    <li>Liu et al., 2023: <em>Lost in the Middle: How Language Models Use Long Contexts</em> — <a href="https://arxiv.org/abs/2307.03172">arxiv.org/abs/2307.03172</a></li>
-    <li>OpenAI 官方文档：<em>Prompt caching</em>（上下文缓存）— <a href="https://platform.openai.com/docs/guides/prompt-caching">platform.openai.com/docs/guides/prompt-caching</a></li>
-    <li>Anthropic 工程博客：<em>Effective context engineering for AI agents</em> — <a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">anthropic.com/engineering/effective-context-engineering-for-ai-agents</a></li>
-    <li>LangChain 官方文档：<em>Retrieval-augmented generation (RAG)</em> — <a href="https://python.langchain.com/docs/concepts/rag/">python.langchain.com/docs/concepts/rag</a></li>
-    <li>Wikipedia：<em>Prompt engineering</em> — <a href="https://en.wikipedia.org/wiki/Prompt_engineering">en.wikipedia.org/wiki/Prompt_engineering</a></li>
-  </ul>
+<h2><span class="num">6 ·</span>自测问题</h2>
 
-  <div class="footer">Generated by <code>concept-learning-material</code> skill · 2026-09</div>
+<details><summary>Q1 · "上下文"和"提示词"是一回事吗？</summary>
+不是。提示词是你写的输入；上下文是这一次请求中模型实际看到的所有 token 序列，包含多类角色消息、工具结果、检索片段。前者<em>是一个工件</em>，后者<em>是一个时刻</em>。
+</details>
+
+<details><summary>Q2 · 一个 200K 窗口的模型，是不是就能"记住"超长文档？</summary>
+能"装下"，但不一定能"读好"。模型在长上下文的中段最容易漏（Lost in the Middle）。工程上仍要把关键信息放在头部或尾部。
+</details>
+
+<details><summary>Q3 · 为什么要把 system 和 user 分开？</summary>
+System 写稳定的身份、约束、输出格式；user 写当前问题。混在一起会让模型在每轮重新猜"我到底是谁"，稳定性下降。
+</details>
+
+<details><summary>Q4 · 当历史对话超出窗口时，常见的三种处理是什么？</summary>
+① 截断（保留最近 N 轮）；② 摘要（让模型把中段压成 1~2 条笔记）；③ 检索（用 RAG 在历史里找最相关几条）。
+</details>
+
+<details><summary>Q5 · 一份 prompt 写得很长很完整，效果就一定更好吗？</summary>
+不一定。超长 prompt 会稀释每条指令的权重，并触发 Lost in the Middle。设计良好的上下文往往<em>短、清晰、目标明确</em>。
+</details>
+
+<details><summary>Q6 · Context Engineering 和 Prompt Engineering 到底是什么关系？</summary>
+Prompt Engineering 是 Context Engineering 的一部分（写作提示词的那一段）；Context Engineering 还包括选择 RAG 切片、写 system、设计摘要策略、管理 tool 返回——是把"喂什么给模型"这件事整体上做对。
+</details>
+
+<h2><span class="num">7 ·</span>参考来源</h2>
+<ul>
+  <li><a href="https://arxiv.org/abs/2307.03172" target="_blank" rel="noopener">Lost in the Middle: How Language Models Use Long Contexts</a>（Liu et al., 2023, arXiv）</li>
+  <li><a href="https://www.anthropic.com/news/context-engineering" target="_blank" rel="noopener">Anthropic: Effective context engineering for AI agents</a></li>
+  <li><a href="https://platform.openai.com/docs/guides/text-generation" target="_blank" rel="noopener">OpenAI: Text generation 指南（含上下文窗口说明）</a></li>
+  <li><a href="https://en.wikipedia.org/wiki/Context_window" target="_blank" rel="noopener">Wikipedia: Context window</a></li>
+  <li><a href="https://docs.langchain.com/" target="_blank" rel="noopener">LangChain Docs: RAG / Memory 模块</a></li>
+</ul>
+
+<div class="footer">Generated by <code>concept-learning-material</code> skill · 7 段学习闭环</div>
 
 </div>
 </body>

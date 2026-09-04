@@ -20,8 +20,10 @@
     font-size: 16px; line-height: 1.75; }
   .wrap { max-width: var(--maxw); margin: 0 auto; padding: 56px 28px 96px; }
   h1 { font-size: 40px; letter-spacing: -0.5px; margin: 0 0 8px; }
-  h2 { font-size: 24px; margin: 48px 0 14px; padding-bottom: 8px;
+  h2 { font-size: 22px; margin: 48px 0 14px; padding-bottom: 8px;
        border-bottom: 1px solid var(--line); }
+  h2 .num { color: var(--muted); font-weight: 500; margin-right: 10px;
+            letter-spacing: .04em; }
   h3 { font-size: 18px; margin: 24px 0 8px; color: var(--accent); }
   p { margin: 12px 0; }
   .tagline { color: var(--ink-2); font-size: 17px; margin: 0 0 28px; }
@@ -53,219 +55,247 @@
   .footer { color: var(--muted); font-size: 12px; margin-top: 64px;
             border-top: 1px solid var(--line); padding-top: 18px;
             text-align: center; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(177,78,43,.3); }
+  a:hover { border-bottom-color: var(--accent); }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <h1>Agent（智能体）</h1>
-  <p class="tagline">一个能自己定计划、用工具、读结果、直到把目标做完的 AI 程序。</p>
+<h1>Agent（智能体）</h1>
+<p class="tagline">一个能"看着目标、自己选工具、自己判断下一步"的 AI 程序。</p>
 
-  <div class="glance">
-    <div class="card"><div class="k">类比</div><div class="v">一个能开火、看菜谱、顺手把厨房收拾了的厨师</div></div>
-    <div class="card"><div class="k">本质</div><div class="v">LLM + 工具 + 循环</div></div>
-    <div class="card"><div class="k">关键能力</div><div class="v">规划 / 调用工具 / 观察结果</div></div>
-    <div class="card"><div class="k">最易混淆</div><div class="v">≠ 单纯的聊天模型</div></div>
-  </div>
+<div class="glance">
+  <div class="card"><div class="k">类比</div><div class="v">有目标的实习生，不是聊天机器人</div></div>
+  <div class="card"><div class="k">本质</div><div class="v">在循环里持续决定「下一步做什么」</div></div>
+  <div class="card"><div class="k">关键组件</div><div class="v">LLM · 记忆 · 工具 · 反馈</div></div>
+  <div class="card"><div class="k">核心能力</div><div class="v">规划 + 调用 + 反思</div></div>
+  <div class="card"><div class="k">典型风险</div><div class="v">死循环 · 幻觉工具调用</div></div>
+</div>
 
-  <h2>TL;DR</h2>
-  <ul>
-    <li>Agent 是「会动手」的 AI，不是「会说话」的 AI。</li>
-    <li>它由 <strong>大脑（LLM）</strong> + <strong>工具</strong> + <strong>循环</strong> 组成。</li>
-    <li>Agent 的本质是 <strong>观察 → 思考 → 行动</strong> 的反复执行。</li>
-  </ul>
+<h2><span class="num">1 ·</span>学习目标</h2>
+<ul>
+  <li>能 <b>说出</b> 什么是 Agent、它和普通 LLM 对话的区别是什么。</li>
+  <li>能 <b>画出</b> Agent 的核心循环（感知 → 思考 → 行动 → 观察）。</li>
+  <li>能 <b>辨别</b> Agent、Workflow、RAG 三者各自的适用场景。</li>
+  <li>能 <b>写出</b> 一个最小可运行的 ReAct 风格示例。</li>
+  <li>能 <b>避开</b> 至少三种 Agent 设计上的常见误区（无终止条件、工具描述不清、无评估）。</li>
+</ul>
 
-  <h3>为什么这件事重要</h3>
-  <p>单单一个聊天模型只能"在脑子里想"——它出不了你的对话框。Agent 让语言模型第一次能"碰"真实世界：发邮件、写文件、调 API、跑代码。一句话理解 Agent 是当下所有 AI 应用工程的入口。</p>
+<h2><span class="num">2 ·</span>核心问题</h2>
+<ol>
+  <li>Agent 跟一次性"问答"的 LLM，到底多了什么？</li>
+  <li>Agent 是怎么决定"下一步做什么"的？</li>
+  <li>为什么 Agent 通常需要"工具"而不是只靠提示词？</li>
+  <li>什么样的任务适合 Agent，什么样的不适合？</li>
+  <li>Agent 跑飞了该怎么兜底？</li>
+</ol>
 
-  <h2>1 · 心智模型（Mental model）</h2>
-  <figure>
-    <svg viewBox="0 0 680 360" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
-                markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-          <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
-        </marker>
-      </defs>
-      <rect x="240" y="20" width="200" height="60" rx="12"
-            fill="#fbe8e0" stroke="#b14e2b" stroke-width="1.5"/>
-      <text x="340" y="46" text-anchor="middle" font-size="15"
-            fill="#1f2328" font-weight="600">用户目标</text>
-      <text x="340" y="66" text-anchor="middle" font-size="12" fill="#57606a">"帮我整理上周的销售数据"</text>
+<h2><span class="num">3 ·</span>结构化解释</h2>
 
-      <rect x="260" y="130" width="160" height="100" rx="14"
-            fill="#ffffff" stroke="#3b4d80" stroke-width="2"/>
-      <text x="340" y="158" text-anchor="middle" font-size="16"
-            fill="#3b4d80" font-weight="700">Agent · 大脑</text>
-      <text x="340" y="180" text-anchor="middle" font-size="13" fill="#57606a">LLM</text>
-      <text x="340" y="200" text-anchor="middle" font-size="13" fill="#57606a">决定下一步做什么</text>
-      <text x="340" y="218" text-anchor="middle" font-size="13" fill="#57606a">何时算"做完了"</text>
+<h3>3.1 · 心智模型：带目标的循环</h3>
+<p>先抛开术语，把 Agent 想成<em>「一位被指派了任务的实习生」</em>：</p>
+<ul>
+  <li><b>目标</b>明确（"帮我在 200 字内总结这篇文章的三点争议"）。</li>
+  <li><b>可调用的工具</b>明确（搜索引擎、计算器、读 PDF、跑 SQL）。</li>
+  <li><b>执行过程</b>是一个个"看一眼情况、决定一步、做一步、再看一眼"的<em>循环</em>。</li>
+  <li><b>退出条件</b>明确：要么时间到了，要么结果判定为"够了"。</li>
+</ul>
 
-      <rect x="60" y="160" width="140" height="50" rx="10"
-            fill="#e7f1ec" stroke="#2f6f5e" stroke-width="1.5"/>
-      <text x="130" y="183" text-anchor="middle" font-size="14"
-            fill="#2f6f5e" font-weight="600">工具 1</text>
-      <text x="130" y="200" text-anchor="middle" font-size="12" fill="#57606a">读文件 / 调 API</text>
+<p>把这个心智模型画出来，就是整张页面最重要的一张图：</p>
 
-      <rect x="480" y="160" width="140" height="50" rx="10"
-            fill="#e7f1ec" stroke="#2f6f5e" stroke-width="1.5"/>
-      <text x="550" y="183" text-anchor="middle" font-size="14"
-            fill="#2f6f5e" font-weight="600">工具 2</text>
-      <text x="550" y="200" text-anchor="middle" font-size="12" fill="#57606a">写代码 / 跑命令</text>
+<figure>
+  <svg viewBox="0 0 680 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Agent 核心循环">
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
+      </marker>
+    </defs>
+    <rect x="20" y="40" width="160" height="80" rx="12" fill="#ffffff" stroke="#1f2328"/>
+    <text x="100" y="78" text-anchor="middle" font-size="16" font-weight="600" fill="#1f2328">观察</text>
+    <text x="100" y="100" text-anchor="middle" font-size="12" fill="#57606a">Observe</text>
 
-      <line x1="200" y1="185" x2="258" y2="185" stroke="#57606a" stroke-width="1.5"
-            marker-end="url(#arrow)"/>
-      <line x1="422" y1="185" x2="478" y2="185" stroke="#57606a" stroke-width="1.5"
-            marker-end="url(#arrow)"/>
+    <rect x="260" y="40" width="160" height="80" rx="12" fill="#fdebe2" stroke="#b14e2b"/>
+    <text x="340" y="78" text-anchor="middle" font-size="16" font-weight="600" fill="#1f2328">思考</text>
+    <text x="340" y="100" text-anchor="middle" font-size="12" fill="#57606a">Think · 选工具/动作</text>
 
-      <ellipse cx="340" cy="305" rx="220" ry="22" fill="#faf3e6" stroke="#b14e2b"
-               stroke-dasharray="4 4" stroke-width="1.5"/>
-      <text x="340" y="310" text-anchor="middle" font-size="14"
-            fill="#b14e2b" font-weight="600">循环: 观察 (Observation) → 思考 (Thought) → 行动 (Action)</text>
+    <rect x="500" y="40" width="160" height="80" rx="12" fill="#e7f0ec" stroke="#2f6f5e"/>
+    <text x="580" y="78" text-anchor="middle" font-size="16" font-weight="600" fill="#1f2328">行动</text>
+    <text x="580" y="100" text-anchor="middle" font-size="12" fill="#57606a">Act · 调用工具</text>
 
-      <path d="M340 232 Q340 260 340 282" stroke="#57606a" stroke-width="1.5" fill="none"
-            marker-end="url(#arrow)"/>
-      <path d="M340 282 Q340 260 340 232" stroke="#57606a" stroke-width="1.5"
-            stroke-dasharray="3 3" fill="none"/>
-    </svg>
-    <figcaption>Agent 的核心三件套：大脑（LLM）、工具集、一个不停转的"观察 → 思考 → 行动"循环。</figcaption>
-  </figure>
+    <path d="M180,80 L260,80" stroke="#57606a" stroke-width="2" marker-end="url(#arr)"/>
+    <path d="M420,80 L500,80" stroke="#57606a" stroke-width="2" marker-end="url(#arr)"/>
+    <path d="M580,120 C 580,200 100,200 100,120" stroke="#57606a" stroke-width="2" marker-end="url(#arr)" fill="none"/>
 
-  <h2>2 · 解剖</h2>
-  <p>一个完整的 Agent 通常包含以下部件。它们不一定全都出现，但缺了哪一个都会出问题：</p>
-  <ul>
-    <li><strong>大脑（LLM / Policy）</strong>：负责读懂任务、拆解任务、决定下一步。</li>
-    <li><strong>工具（Tools）</strong>：让 Agent 能"做"事的能力，比如读文件、查数据库、调搜索、发邮件。</li>
-    <li><strong>记忆（Memory）</strong>：短期记忆是当前任务上下文，长期记忆是跨任务沉淀的事实。</li>
-    <li><strong>规划（Planner）</strong>：把大目标拆成可执行的小步骤，可能写成有向无环图（DAG）。</li>
-    <li><strong>反思 / 校验（Reflection）</strong>：执行后回头检查，发现问题再补救——这是从"能跑"到"能跑对"的关键。</li>
-    <li><strong>停止条件（Stop condition）</strong>：什么时候算"做完了"？是 Agent 最容易被忽视也最值钱的部分。</li>
-  </ul>
+    <rect x="220" y="220" width="240" height="60" rx="12" fill="#f6f4ee" stroke="#8b949e"/>
+    <text x="340" y="248" text-anchor="middle" font-size="14" fill="#1f2328">任务目标 + 终止条件</text>
+    <text x="340" y="266" text-anchor="middle" font-size="12" fill="#8b949e">贯穿整段循环</text>
+    <path d="M340,220 L340,140" stroke="#8b949e" stroke-dasharray="4 4" fill="none"/>
+  </svg>
+  <figcaption>Agent 核心循环：观察 → 思考 → 行动 → 观察，并被一个明确的目标与终止条件框住。</figcaption>
+</figure>
 
-  <h2>3 · 运作机制（一步步看）</h2>
-  <ol>
-    <li><strong>接收目标</strong>：用户给一句话或一个任务说明。</li>
-    <li><strong>规划</strong>：LLM 把目标拆成步骤，可写进待办列表。</li>
-    <li><strong>选工具</strong>：每一步选一个最合适的工具，并填好参数。</li>
-    <li><strong>执行</strong>：Agent 真的去"做"——读文件、调 API、跑命令。</li>
-    <li><strong>观察结果</strong>：把工具返回的结果塞回上下文。</li>
-    <li><strong>判断是否结束</strong>：是 → 整理输出；否 → 回到第 3 步。</li>
-  </ol>
-  <figure>
-    <svg viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5"
-                markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-          <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
-        </marker>
-      </defs>
-      <g font-family="-apple-system, sans-serif" font-size="13">
-        <rect x="20" y="80" width="100" height="60" rx="10" fill="#fbe8e0" stroke="#b14e2b"/>
-        <text x="70" y="115" text-anchor="middle" fill="#b14e2b" font-weight="600">接目标</text>
+<p>这张图是后面所有变体的母版：</p>
+<ul>
+  <li><b>ReAct</b>（Reason + Act）就是"思考"那一步写明显的 Chain-of-Thought。</li>
+  <li><b>Plan-and-Execute</b> 就是把"思考"拆成"先规划，再逐步执行"。</li>
+  <li><b>ReWOO</b> 就是让"思考"在跑工具之前先把所有计划生成出来。</li>
+</ul>
 
-        <rect x="150" y="80" width="100" height="60" rx="10" fill="#e7eaf6" stroke="#3b4d80"/>
-        <text x="200" y="115" text-anchor="middle" fill="#3b4d80" font-weight="600">规划</text>
+<h3>3.2 · 组成解剖</h3>
+<p>把"实习生"拆成真正能在代码里放下的部件，Agent 通常由四个组件构成：</p>
 
-        <rect x="280" y="80" width="100" height="60" rx="10" fill="#e7f1ec" stroke="#2f6f5e"/>
-        <text x="330" y="115" text-anchor="middle" fill="#2f6f5e" font-weight="600">选工具</text>
+<figure>
+  <svg viewBox="0 0 680 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Agent 四个组件">
+    <rect x="40" y="60" width="600" height="60" rx="10" fill="#ffffff" stroke="#1f2328"/>
+    <text x="80" y="96" font-size="14" font-weight="600" fill="#1f2328">LLM 大脑</text>
+    <text x="200" y="96" font-size="12" fill="#57606a">在每一步把上下文翻译成"下一步该做什么"</text>
 
-        <rect x="410" y="80" width="100" height="60" rx="10" fill="#fbe8e0" stroke="#b14e2b"/>
-        <text x="460" y="115" text-anchor="middle" fill="#b14e2b" font-weight="600">执行</text>
+    <rect x="40" y="140" width="290" height="60" rx="10" fill="#fdebe2" stroke="#b14e2b"/>
+    <text x="60" y="176" font-size="14" font-weight="600" fill="#1f2328">记忆 (Memory)</text>
+    <text x="60" y="196" font-size="12" fill="#57606a">短期:历史对话 / 长期:向量库/摘要</text>
 
-        <rect x="540" y="80" width="100" height="60" rx="10" fill="#e7eaf6" stroke="#3b4d80"/>
-        <text x="590" y="115" text-anchor="middle" fill="#3b4d80" font-weight="600">观察</text>
-      </g>
-      <g stroke="#57606a" stroke-width="1.5" fill="none" marker-end="url(#arr2)">
-        <line x1="120" y1="110" x2="148" y2="110"/>
-        <line x1="250" y1="110" x2="278" y2="110"/>
-        <line x1="380" y1="110" x2="408" y2="110"/>
-        <line x1="510" y1="110" x2="538" y2="110"/>
-        <path d="M590 140 Q590 180 130 180 Q70 180 70 145" stroke-dasharray="4 4"/>
-        <text x="340" y="180" text-anchor="middle" font-size="12" fill="#57606a">循环 直到目标完成</text>
-      </g>
-    </svg>
-    <figcaption>Agent 的一次完整运行就是上面这条链路的 N 次循环。</figcaption>
-  </figure>
+    <rect x="370" y="140" width="270" height="60" rx="10" fill="#e7f0ec" stroke="#2f6f5e"/>
+    <text x="390" y="176" font-size="14" font-weight="600" fill="#1f2328">工具 (Tools)</text>
+    <text x="390" y="196" font-size="12" fill="#57606a">搜索·计算·查 DB·写文件·调 API</text>
 
-  <h2>4 · 一个具体的应用场景</h2>
-  <p><strong>场景：自动整理本周销售数据并生成简报。</strong></p>
-  <p>每周一上午，业务运营实习生小李要把七份 Excel、一份 CRM 导出和上周的会议纪要合并成一份"上周销售简报"。在没有 Agent 之前，他要花一小时手动打开文件、复制粘贴、调公式；现在他只需要一句话：</p>
-  <pre><code>用户："帮我把 sales/ 这个目录下的本周数据整理成简报，
-     重点是环比变化最大的三个产品和对应的客户名单。"</code></pre>
-  <p>Agent 在收到这句话之后发生的事：</p>
-  <ol>
-    <li>把任务写到待办里：① 列出目录、② 选三份关键 Excel 读、③ 计算环比、④ 找客户、⑤ 写成简报。</li>
-    <li>调 <code>list_files</code> 工具，看 <code>sales/</code> 里有哪些文件。</li>
-    <li>调 <code>read_excel</code> 工具逐个读，发现其中一份是上周会议纪要，自动跳过。</li>
-    <li>调 <code>python</code> 工具跑 pandas，计算环比 TOP 3。</li>
-    <li>调 <code>search_customers</code> 工具找这 3 个产品的客户名单。</li>
-    <li>把以上结果汇总进 Context，调 LLM 写一份三段式简报。</li>
-    <li>把简报存到 <code>reports/week-37.md</code>，并打印"已完成"。</li>
-  </ol>
-  <p>整个过程没有任何"魔法"——只是循环、工具调用、Context 拼装。但它把一个原本 1 小时的人工任务，压缩成了 1 分钟的一次"对话"。这就是 Agent 给小李带来的核心价值。</p>
+    <rect x="40" y="220" width="600" height="40" rx="10" fill="#f1ede4" stroke="#8b949e"/>
+    <text x="60" y="246" font-size="14" font-weight="600" fill="#1f2328">反馈与评判 (Feedback)</text>
+    <text x="280" y="246" font-size="12" fill="#57606a">让 Agent 看到自己错在哪、回看自己的轨迹</text>
+  </svg>
+  <figcaption>Agent 的四个组件：LLM、记忆、工具、反馈。少一项，Agent 就不再是 Agent。</figcaption>
+</figure>
 
-  <h2>5 · 对比与误区</h2>
-  <table>
-    <thead>
-      <tr><th></th><th>普通 LLM 对话</th><th>Agent</th></tr>
-    </thead>
-    <tbody>
-      <tr><td>输出形式</td><td>一段文字</td><td>调用工具 + 文字结果</td></tr>
-      <tr><td>能否读你电脑文件</td><td>不能</td><td>能（通过工具）</td></tr>
-      <tr><td>能否执行多步</td><td>单轮</td><td>多轮循环，自动推进</td></tr>
-      <tr><td>出错怎么办</td><td>你来纠错</td><td>它自己反思再试</td></tr>
-      <tr><td>适用场景</td><td>问答 / 写文案</td><td>真实任务自动化</td></tr>
-    </tbody>
-  </table>
+<p>最容易忘的是<em>反馈</em>：没有反馈，Agent 看不见自己犯的错，下次还是犯。</p>
 
-  <h3>常见误区</h3>
-  <ul>
-    <li><strong>"Agent = 更聪明的聊天"。</strong>错。Agent 的根本差别在于"能不能做"——不是"说得更好"。</li>
-    <li><strong>"越复杂的 Agent 越好"。</strong>不一定。多工具的 Agent 不一定比单工具的 Agent 表现好，反而更容易跑偏。</li>
-    <li><strong>"Agent 能 100% 自主完成所有任务"。</strong>现阶段绝大多数 Agent 仍然需要人在环（human-in-the-loop）确认关键步骤。</li>
-    <li><strong>"Agent 不会幻觉"。</strong>错。它的语言模型部分依然会幻觉——所以工具失败、上下文拼错这类错误非常常见。</li>
-  </ul>
+<h3>3.3 · 运作机制（按步骤展开）</h3>
+<ol>
+  <li><b>接受目标</b>：用户给一个高层目标，不给步骤。</li>
+  <li><b>初始化上下文</b>：把目标、可用工具描述、历史摘要塞进 prompt。</li>
+  <li><b>进循环</b>：把当前上下文喂给 LLM，让它输出<em>"下一步是调用哪个工具+参数"</em>。</li>
+  <li><b>执行工具</b>：调外部系统，把结果塞回上下文。</li>
+  <li><b>判断是否收尾</b>：若 LLM 输出"我得出最终答案了"或达到轮次上限，就结束。</li>
+  <li><b>输出 &amp; 留痕</b>：把答案返回用户，把整段轨迹写进记忆供下次复用。</li>
+</ol>
 
-  <h2>6 · 代码级一瞥（最小可运行的 ReAct 风格循环）</h2>
-  <pre><code>tools = {
-    "search":  search_api,
-    "python":  run_python,
-    "file":    read_file,
+<h3>3.4 · 为什么这件事重要</h3>
+<p>因为 LLM 本身只能"读一段、写一段"。一旦任务需要"打开网页看一眼、改一行数据库、再看一眼"，单次对话就退化成猜测。<em>Agent 模式</em>让 LLM 第一次有了"自己发现信息、自己验证自己、自己迭代答案"的资格——这是它从"问答工具"走向"工作伙伴"的临界点。</p>
+
+<h3>3.5 · 代码级一瞥（最小可运行的 ReAct 风格循环）</h3>
+<pre><code>"""最小 Agent 循环：观察→思考→行动→观察，直到模型说 DONE。"""
+from openai import OpenAI
+
+client = OpenAI()
+
+TOOLS = {
+    "get_time":      "返回当前时间（占位）。",
+    "search_docs":   "在公司文档库里搜索一段文字，返回前 3 条摘要。",
+    "calc":          "计算一个数学表达式并返回数值。",
 }
 
-history = [{"role": "user", "content": "上周的销售数据是多少？"}]
+def call_tool(name, args):
+    # 真实实现里这里应该按 name 路由到具体函数
+    if name == "calc":
+        return str(eval(args["expr"]))
+    return f"[{name} 收到: {args}]"
 
-while not done(history):
-    thought, action = llm_decide(history, tools)   # 思考 + 选工具
-    if action is None: break
-    name, args = action
-    observation = tools[name](**args)               # 真去执行
-    history += [
-        {"role": "assistant", "content": thought},
-        {"role": "tool", "name": name, "content": observation},
-    ]
+history = [{"role": "system", "content":
+    f"你是实习生。你可以调用工具：{TOOLS}。"
+    "想停就回复 DONE: &lt;结论&gt;。"}]
 
-print(history[-1]["content"])</code></pre>
-  <p>三件事：<code>llm_decide</code> 决定下一步；<code>tools[name](**args)</code> 真的去做；<code>history</code> 把一切装回上下文，让下一次决策看得见上一次的结果。</p>
+user_goal = "明天下午 3 点提醒我开会。"
+history.append({"role": "user", "content": user_goal})
 
-  <h2>7 · Recap & 自检</h2>
-  <details><summary>1. Agent 和 LLM 的本质区别是什么？</summary>LLM 只能"想"并产出文字；Agent 能"做"——通过工具影响外部世界，并基于反馈循环推进任务。</details>
-  <details><summary>2. 一个 Agent 最少需要哪三样东西？</summary>一个能决策的 LLM、一组可调用的工具、一个循环（让 Agent 能反复"观察 → 思考 → 行动"）。</details>
-  <details><summary>3. 为什么要给 Agent 明确的"停止条件"？</summary>没有停止条件，Agent 会无限循环、烧光 token，甚至把事情做歪。停止条件 = 让 Agent 知道什么时候算"做完"。</details>
-  <details><summary>4. Agent 失败的第一大原因是什么？</summary>工具失败 + 上下文污染：工具返回错的结果没被识别，或者历史上下文太长让 LLM 抓不到重点。</details>
-  <details><summary>5. 为什么"反思"环节是从能用走向好用的关键？</summary>因为工具输出常常有歧义或错误，没有反思 Agent 会一错到底；有了反思，它能识别错误、改正路径。</details>
-  <details><summary>6. 举一个生活化的 Agent 例子。</summary>你叫外卖：接收订单 → 拆解（取餐、配送、送达）→ 选交通工具 → 跑单 → 看反馈（路上堵不堵）→ 决定继续送还是改路线。这就是 Agent。</details>
+for step in range(8):                            # 终止条件：最多 8 轮
+    msg = client.chat.completions.create(
+        model="gpt-4o-mini", messages=history
+    ).choices[0].message
 
-  <h2>8 · 延伸阅读（可核查）</h2>
-  <ul>
-    <li>ReAct 论文：<em>ReAct: Synergizing Reasoning and Acting in Language Models</em>，Yao et al., 2022 — <a href="https://arxiv.org/abs/2210.03629">arxiv.org/abs/2210.03629</a></li>
-    <li>Anthropic 工程博客：<em>Building effective agents</em> — <a href="https://www.anthropic.com/research/building-effective-agents">anthropic.com/research/building-effective-agents</a></li>
-    <li>OpenAI 官方文档：<em>Function calling / Tool use</em> — <a href="https://platform.openai.com/docs/guides/function-calling">platform.openai.com/docs/guides/function-calling</a></li>
-    <li>Hugging Face Agents Course（免费实战课）— <a href="https://huggingface.co/learn/agents-course">huggingface.co/learn/agents-course</a></li>
-    <li>Wikipedia：<em>Intelligent agent</em> — <a href="https://en.wikipedia.org/wiki/Intelligent_agent">en.wikipedia.org/wiki/Intelligent_agent</a></li>
-  </ul>
+    if msg.content.startswith("DONE:"):
+        print("最终答案:", msg.content[5:])
+        break
 
-  <div class="footer">Generated by <code>concept-learning-material</code> skill · 2026-09</div>
+    # 模型决定调用哪个工具 + 哪些参数
+    tool, args = msg.tool_call["name"], msg.tool_call["args"]
+    result = call_tool(tool, args)
+
+    history.append({"role": "assistant", "content": msg.content})
+    history.append({"role": "tool", "content": result})
+</code></pre>
+
+<h2><span class="num">4 ·</span>应用案例：让 Agent 自动整理一周的销售数据</h2>
+<p><b>场景</b>：你是一名运营，每天早上 9 点前需要把"上周各渠道销售额 Top 10、退款异常订单、需要关注的客诉"汇成一份 1 页简报。</p>
+<p><b>输入</b>（用户的唯一一句话）：</p>
+<blockquote>"读一下 sales_db 里上周的数据，做一份今天早上 9 点要看的简报。"</blockquote>
+<p><b>Agent 走过的决策点</b>：</p>
+<ol>
+  <li><b>观察</b>：当前时间是周一的 8:55；目标里有一个固定产出模板。</li>
+  <li><b>思考 + 工具</b>：调 <code>sql_query</code>，拉出上周的 orders 与 refunds 表；调 <code>ticket_query</code> 拉出带"投诉"标签的会话。</li>
+  <li><b>思考 + 工具</b>：调 <code>python_runner</code>，按渠道聚合销售额并排序；调 <code>anomaly_detect</code> 找出金额异常的退款。</li>
+  <li><b>观察</b>：模板要求一段开场一段数据；当前上下文已备齐所有数据。</li>
+  <li><b>收尾</b>：把数据写入 <code>report_{date}.md</code> 并调用 <code>send_email</code> 发给你。</li>
+</ol>
+<p><b>结果</b>：你 9 点打开邮箱，就看到一份带 Top 10 渠道、退款异常明细、待处理客诉链接的简报，并且 Agent 把每一次 SQL 留到了 <code>audit.log</code> 里供你回头核对。</p>
+<p>这个场景展示了 Agent 的三件事：<em>把目标翻译成步骤、用工具补足 LLM 没有的能力、每次产出都留痕</em>。</p>
+
+<h2><span class="num">5 ·</span>概念辨析</h2>
+
+<h3>5.1 · Agent vs Workflow vs RAG</h3>
+<table>
+<thead><tr><th>维度</th><th>Agent（智能体）</th><th>Workflow（工作流）</th><th>RAG（检索增强）</th></tr></thead>
+<tbody>
+<tr><td>路径选择</td><td>由 LLM 在运行时<em>动态决定</em></td><td>由人在写代码时<em>静态编排</em></td><td>固定走检索→生成</td></tr>
+<tr><td>工具调用</td><td>多次、按需</td><td>通常是 0 或 1 次</td><td>通常 0 次</td></tr>
+<tr><td>适合任务</td><td>开放、需要探索</td><td>流程固定</td><td>基于已有知识的问题</td></tr>
+<tr><td>不确定性</td><td>高</td><td>低</td><td>中</td></tr>
+</tbody>
+</table>
+<p>一句话总结：<em>RAG 给 Agent 补"知识"，Workflow 给 Agent 补"纪律"，Agent 给 Workflow 补"应变"</em>。</p>
+
+<h3>5.2 · 常见误区</h3>
+<ul>
+  <li><b>"工具越多越好"</b> — 工具多了 LLM 选择困难，回归测试做不完。给 Agent <em>恰好够用</em> 的工具就好。</li>
+  <li><b>"Agent 能自动纠错"</b> — 没有任何评估与回放机制的 Agent 不会自我改正；它会一错再错同样风格。</li>
+  <li><b>"Agent 适合做一切"</b> — 凡是能 3 步列清楚的任务，用 Workflow 更稳；Agent 是为"流程不完全确定"的任务准备的。</li>
+  <li><b>"上下文越长越好"</b> — 见 <code>learning-materials/llm-context.html</code> 的 Lost-in-the-middle 现象。</li>
+</ul>
+
+<h2><span class="num">6 ·</span>自测问题</h2>
+
+<details><summary>Q1 · Agent 跟一次性 LLM 问答的本质区别是什么？</summary>
+一次性问答是"输入→输出"；Agent 是"输入→循环判断→多次行动→输出"，多了<em>目标、循环、工具、终止条件</em>四件事。
+</details>
+
+<details><summary>Q2 · ReAct 名字里的"Re"和"Act"分别指什么？</summary>
+Re = Reason（推理，先想清楚），Act = Act（行动，再调工具）；二者交替执行。
+</details>
+
+<details><summary>Q3 · 一个 Agent 任务最常见的两个"跑飞"原因是什么？</summary>
+① 没有硬上限：Agent 一直循环烧光预算；② 没有评估：它不知道自己错了，继续错。
+</details>
+
+<details><summary>Q4 · 为什么不直接用更大的 prompt 把所有工具都告诉 LLM？</summary>
+提示越长模型越会"丢失中间"信息（Lost in the Middle），且工具越多选错概率越高。需要在 Agent 里<em>按需</em>暴露工具，而不是一次性把工具谱全塞进去。
+</details>
+
+<details><summary>Q5 · Agent 在课程作业里什么时候比脚本更划算？</summary>
+当任务"步骤不确定但目标明确"时——比如"调研并对比三种开源数据库框架"适合 Agent；"把 CSV 里某列求和"用脚本。
+</details>
+
+<details><summary>Q6 · 看到 Agent 输出"我决定调用 tool X"但实际上 X 不存在时，问题通常出在哪？</summary>
+通常是<em>工具描述不清</em>或<em>工具注册位置和 docstring 不一致</em>。Agent 是按"名字+描述"来选工具的，描述错了，等于菜单写错了。
+</details>
+
+<h2><span class="num">7 ·</span>参考来源</h2>
+<ul>
+  <li><a href="https://arxiv.org/abs/2210.03629" target="_blank" rel="noopener">ReAct: Synergizing Reasoning and Acting in Language Models</a>（Yao et al., 2022, arXiv）</li>
+  <li><a href="https://www.anthropic.com/research/building-effective-agents" target="_blank" rel="noopener">Building effective agents — Anthropic</a></li>
+  <li><a href="https://platform.openai.com/docs/guides/function-calling" target="_blank" rel="noopener">OpenAI Function Calling 指南</a></li>
+  <li><a href="https://en.wikipedia.org/wiki/Intelligent_agent" target="_blank" rel="noopener">Wikipedia: Intelligent agent</a></li>
+  <li><a href="https://huggingface.co/learn/smol-course" target="_blank" rel="noopener">Hugging Face Smol-course：Agents 单元</a></li>
+</ul>
+
+<div class="footer">Generated by <code>concept-learning-material</code> skill · 7 段学习闭环</div>
 
 </div>
 </body>

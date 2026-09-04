@@ -20,8 +20,10 @@
     font-size: 16px; line-height: 1.75; }
   .wrap { max-width: var(--maxw); margin: 0 auto; padding: 56px 28px 96px; }
   h1 { font-size: 40px; letter-spacing: -0.5px; margin: 0 0 8px; }
-  h2 { font-size: 24px; margin: 48px 0 14px; padding-bottom: 8px;
+  h2 { font-size: 22px; margin: 48px 0 14px; padding-bottom: 8px;
        border-bottom: 1px solid var(--line); }
+  h2 .num { color: var(--muted); font-weight: 500; margin-right: 10px;
+            letter-spacing: .04em; }
   h3 { font-size: 18px; margin: 24px 0 8px; color: var(--accent); }
   p { margin: 12px 0; }
   .tagline { color: var(--ink-2); font-size: 17px; margin: 0 0 28px; }
@@ -53,174 +55,216 @@
   .footer { color: var(--muted); font-size: 12px; margin-top: 64px;
             border-top: 1px solid var(--line); padding-top: 18px;
             text-align: center; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(177,78,43,.3); }
+  a:hover { border-bottom-color: var(--accent); }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <h1>Skill（技能）</h1>
-  <p class="tagline">一组结构化的、可复用的指令包，让 Agent 在某个具体任务上表现得更稳、更专业。</p>
+<h1>Skill（技能）</h1>
+<p class="tagline">一份"教 AI 怎么完成一类任务"的可复用说明——把零散经验沉淀成一个可调用的工作流。</p>
 
-  <div class="glance">
-    <div class="card"><div class="k">类比</div><div class="v">餐厅的"标准作业流程"——保证每个厨师都能稳定出同一道菜</div></div>
-    <div class="card"><div class="k">本质</div><div class="v">一份带 frontmatter 的 Markdown 指令包</div></div>
-    <div class="card"><div class="k">关键收益</div><div class="v">省心 / 稳定 / 可分享</div></div>
-    <div class="card"><div class="k">最易混淆</div><div class="v">≠ 一次性 prompt</div></div>
-  </div>
+<div class="glance">
+  <div class="card"><div class="k">类比</div><div class="v">一本你写的 SOP/操作手册</div></div>
+  <div class="card"><div class="k">本质</div><div class="v">把"经验 + 流程 + 风格"打包成一个入口</div></div>
+  <div class="card"><div class="k">两个组件</div><div class="v">when to use · how to do</div></div>
+  <div class="card"><div class="k">核心价值</div><div class="v">让同样的任务不再每次重写 prompt</div></div>
+  <div class="card"><div class="k">典型误区</div><div class="v">把 Skill 当万能 prompt 库</div></div>
+</div>
 
-  <h2>TL;DR</h2>
-  <ul>
-    <li>Skill 是 <strong>Markdown 文件</strong>，前后两个 --- 之间是元数据，下面是说明。</li>
-    <li>它是 <strong>"什么时候用"</strong> + "怎么做" + "做完检查什么" 的合集。</li>
-    <li>它把"同一个流程在每次对话里都要重新解释一遍"省掉。</li>
-  </ul>
+<h2><span class="num">1 ·</span>学习目标</h2>
+<ul>
+  <li>能 <b>说出</b> Skill 是什么，与 prompt、Agent 的根本区别。</li>
+  <li>能 <b>辨认</b> 一个 Skill 的最小可工作结构（frontmatter、when to use、how to do、quality checklist）。</li>
+  <li>能 <b>写出</b> 一个最小可用的 Skill（含 frontmatter、输入、输出合约）。</li>
+  <li>能 <b>应用</b> Skill 的分层（项目级 / 用户级），决定该往哪里放。</li>
+  <li>能 <b>避开</b> 5 种把 Skill 写成"万能工具箱"的常见失败。</li>
+</ul>
 
-  <h3>为什么这件事重要</h3>
-  <p>大型语言模型的强项是"即兴"，弱项是"稳定地重复"。Skill 就是把"你会做的事"变成 Agent 能稳定执行的能力。今天上班写的 Skill，明天、下次、新电脑上都能直接复用——它把"你和 Agent 的默契"沉淀成了可携带的文字。</p>
+<h2><span class="num">2 ·</span>核心问题</h2>
+<ol>
+  <li>Skill 跟我口头写在对话里的 prompt，到底差在哪？</li>
+  <li>一个最小可用的 Skill 需要哪些字段？</li>
+  <li>Skill 和 Agent、Tool 怎么划界？</li>
+  <li>为什么 Skill 要尽量"专一"？</li>
+  <li>什么样的内容应该被沉淀为 Skill？</li>
+</ol>
 
-  <h2>1 · 心智模型</h2>
-  <figure>
-    <svg viewBox="0 0 680 320" xmlns="http://www.w3.org/2000/svg">
-      <rect x="40" y="40" width="220" height="240" rx="14"
-            fill="#ffffff" stroke="#3b4d80" stroke-width="2"/>
-      <text x="150" y="68" text-anchor="middle" font-size="16"
-            fill="#3b4d80" font-weight="700">Skill · SKILL.md</text>
+<h2><span class="num">3 ·</span>结构化解释</h2>
 
-      <rect x="60" y="88" width="180" height="60" rx="8" fill="#fbe8e0" stroke="#b14e2b"/>
-      <text x="150" y="110" text-anchor="middle" font-size="13" fill="#b14e2b" font-weight="600">frontmatter</text>
-      <text x="150" y="128" text-anchor="middle" font-size="11" fill="#57606a">name / description</text>
+<h3>3.1 · 心智模型：写给下一任"我"的 SOP</h3>
+<p>把 Skill 想成<em>"一份你自己写的、操作某类任务的标准作业流程"</em>：</p>
+<ul>
+  <li>开头一段<em>触发条件</em>——"什么时候我才需要翻开这本手册"。</li>
+  <li>中间一段<em>步骤与规则</em>——按顺序，要做到什么程度。</li>
+  <li>结尾一段<em>自检 / 异常处理</em>——做完后看一眼对不对、出错了怎么回退。</li>
+</ul>
+<p>Skill 的"魔法"不在于它有多少权力，而在于它<em>把那些"我每次都要重新说一遍"的经验固化下来</em>。</p>
 
-      <rect x="60" y="158" width="180" height="110" rx="8" fill="#e7f1ec" stroke="#2f6f5e"/>
-      <text x="150" y="180" text-anchor="middle" font-size="13" fill="#2f6f5e" font-weight="600">body</text>
-      <text x="150" y="200" text-anchor="middle" font-size="11" fill="#57606a">when to use</text>
-      <text x="150" y="218" text-anchor="middle" font-size="11" fill="#57606a">workflow</text>
-      <text x="150" y="236" text-anchor="middle" font-size="11" fill="#57606a">checklist / examples</text>
+<figure>
+  <svg viewBox="0 0 680 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Skill 结构">
+    <rect x="40" y="40" width="600" height="36" rx="8" fill="#f1ede4" stroke="#8b949e"/>
+    <text x="60" y="64" font-size="13" fill="#1f2328"><tspan font-weight="600">frontmatter</tspan> (YAML) — name / description / 触发词</text>
 
-      <rect x="320" y="100" width="320" height="120" rx="14"
-            fill="#fafaf7" stroke="#57606a" stroke-dasharray="4 4"/>
-      <text x="480" y="126" text-anchor="middle" font-size="14"
-            fill="#1f2328" font-weight="600">Agent 运行时</text>
-      <text x="480" y="150" text-anchor="middle" font-size="12" fill="#57606a">当用户的请求看起来像某个</text>
-      <text x="480" y="168" text-anchor="middle" font-size="12" fill="#57606a">Skill 的 description,</text>
-      <text x="480" y="186" text-anchor="middle" font-size="12" fill="#57606a">就把这个 Skill 加载进上下文。</text>
-      <text x="480" y="208" text-anchor="middle" font-size="12" fill="#b14e2b">→ 模型按 Skill 的流程执行</text>
+    <rect x="40" y="90" width="600" height="36" rx="8" fill="#fdebe2" stroke="#b14e2b"/>
+    <text x="60" y="114" font-size="13" fill="#1f2328"><tspan font-weight="600">when to use</tspan> — 触发条件 &amp; 不适用的场景</text>
 
-      <line x1="260" y1="160" x2="318" y2="160" stroke="#57606a" stroke-width="1.5"
-            marker-end="url(#arrow)"/>
-      <defs>
-        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
-                markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-          <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
-        </marker>
-      </defs>
-    </svg>
-    <figcaption>Skill 的本质：一份放在磁盘上的 Markdown，Agent 在合适时机把它加载进上下文当作"操作手册"。</figcaption>
-  </figure>
+    <rect x="40" y="140" width="290" height="100" rx="8" fill="#e7f0ec" stroke="#2f6f5e"/>
+    <text x="60" y="164" font-size="13" font-weight="600" fill="#1f2328">how to do</text>
+    <text x="60" y="188" font-size="12" fill="#57606a">输入字段 / 输出合约 /</text>
+    <text x="60" y="206" font-size="12" fill="#57606a">工作流步骤 / 内容规则</text>
+    <text x="60" y="224" font-size="12" fill="#57606a">视觉与样式系统</text>
 
-  <h2>2 · 解剖：一个好的 Skill 长什么样</h2>
-  <ul>
-    <li><strong>frontmatter（顶部的元数据）</strong>：<code>name</code>（唯一标识）+ <code>description</code>（写明<em>何时使用</em>）。后者尤其关键——是触发匹配的主要依据。</li>
-    <li><strong>when to use</strong>：用人话写出"用户讲哪类话时该启动我"。越具体越好，避免与其它 Skill 撞车。</li>
-    <li><strong>inputs / outputs</strong>：标清楚 Skill 需要什么输入、产出什么输出。表格化最清楚。</li>
-    <li><strong>workflow</strong>：分步操作清单。这是 Skill 的"主菜"。</li>
-    <li><strong>quality checklist</strong>：完工前要确认的几条事——决定该 Skill 的可复用性。</li>
-    <li><strong>examples / failure modes</strong>：正反样本，防止下次跑偏。</li>
-  </ul>
+    <rect x="350" y="140" width="290" height="100" rx="8" fill="#fdebe2" stroke="#b14e2b"/>
+    <text x="370" y="164" font-size="13" font-weight="600" fill="#1f2328">examples + self-check</text>
+    <text x="370" y="188" font-size="12" fill="#57606a">典型调用 / 反例 /</text>
+    <text x="370" y="206" font-size="12" fill="#57606a">完成前清单 / 失效模式</text>
+  </svg>
+  <figcaption>一个 Skill 的典型骨架——把"经验"按可复用结构装订起来。</figcaption>
+</figure>
 
-  <h2>3 · 运作机制</h2>
-  <ol>
-    <li><strong>写</strong>：用 Markdown，按上述骨架写一个 <code>SKILL.md</code>。</li>
-    <li><strong>放</strong>：项目级放 <code>./.workbuddy/skills/&lt;name&gt;/SKILL.md</code>；个人级放全局 skills 目录。</li>
-    <li><strong>匹配</strong>：每次会话开始时，Agent 读所有可用 Skill 的 <code>description</code>。</li>
-    <li><strong>触发</strong>：用户的话与某个 Skill 的 description 命中 → 把该 Skill 的全文加载进上下文。</li>
-    <li><strong>执行</strong>：Agent 按 Skill 的 workflow 工作，并按 checklist 自检。</li>
-  </ol>
+<h3>3.2 · 组成解剖</h3>
+<p>把 Skill 拆到代码级别，它通常由这几段组成：</p>
+<table>
+<thead><tr><th>段落</th><th>作用</th><th>不写会怎样</th></tr></thead>
+<tbody>
+<tr><td><b>frontmatter</b></td><td>告诉系统"我是谁、什么时候该被匹配"</td><td>系统不知道何时调用</td></tr>
+<tr><td><b>when to use / not</b></td><td>把"做什么、不做什么"边界划清</td><td>被滥用，模型不知所措</td></tr>
+<tr><td><b>Inputs</b></td><td>列出可调用的字段（必填/可选）</td><td>每次都得说一遍参数</td></tr>
+<tr><td><b>Output contract</b></td><td>约定产出长什么样（结构、长度、风格）</td><td>每次产出风格漂移</td></tr>
+<tr><td><b>Workflow</b></td><td>一步步的固定动作</td><td>每次随机排列</td></tr>
+<tr><td><b>Quality checklist</b></td><td>完成前自检</td><td>80% 的常见错误漏掉</td></tr>
+</tbody>
+</table>
 
-  <h2>4 · 一个具体的应用场景</h2>
-  <p><strong>场景：把"每周周报"沉淀成一个 Skill。</strong></p>
-  <p>你发现自己和 Agent 在过去两个月里，每周都要重复同一段对话：</p>
-  <ol>
-    <li>"读一下 <code>notes/week-N.md</code>。"</li>
-    <li>"按三段整理：做了什么、学到什么、下周计划。"</li>
-    <li>"不要写客套话。"</li>
-    <li>"不超过 400 字。"</li>
-  </ol>
-  <p>每次都要重新敲一遍。这就是写 Skill 的最强信号——你<em>重复</em>做<em>同一套多步骤流程</em>。你把这个流程写成 <code>.workbuddy/skills/weekly-report/SKILL.md</code>，从此以后只要说一句"做周报"，Agent 会自动：</p>
-  <ul>
-    <li>匹配 description（"周五下午 / 用户说做周报"）→ 把 Skill 全文加载进 Context。</li>
-    <li>读你指定的笔记。</li>
-    <li>按三段排版。</li>
-    <li>按 checklist 自检（≤ 400 字、无客套话、时间表述统一）。</li>
-  </ul>
-  <p>写一次，用 N 次；换电脑、换助理，也能复用。这就是 Skill 的价值。</p>
+<h3>3.3 · 运作机制（按步骤展开）</h3>
+<ol>
+  <li><b>匹配</b>：用户输入进来，系统拿 frontmatter 的 <code>description</code> 和触发词匹配，决定要不要把这份 Skill 加载。</li>
+  <li><b>注入</b>：匹配的 Skill 的正文会被注入 Agent 的上下文（典型形式是一段 system 增强）。</li>
+  <li><b>执行</b>：Agent 按 Skill 中的 workflow 一步步做。</li>
+  <li><b>检查</b>：走完 Quality checklist，决定通过 / 回退。</li>
+  <li><b>回写</b>（可选）：把本次经验回写到 Skill，让它下一次更强。</li>
+</ol>
 
-  <h2>5 · 对比与误区</h2>
-  <table>
-    <thead>
-      <tr><th></th><th>一次性 Prompt</th><th>Skill</th><th>MCP / 工具（Tool）</th></tr>
-    </thead>
-    <tbody>
-      <tr><td>形式</td><td>一段话</td><td>一份带 frontmatter 的 Markdown</td><td>一段可被 Agent 调用的代码</td></tr>
-      <tr><td>是否每次都要重写</td><td>是</td><td>否，写一次复用 N 次</td><td>否，一次实现 N 次调用</td></tr>
-      <tr><td>触发动机</td><td>用户直接说</td><td>被 description 触发，模型决定</td><td>被模型主动调用</td></tr>
-      <tr><td>能做的事</td><td>引导文风 / 任务</td><td>把一整套流程沉淀下来</td><td>真正去"做"——读文件、调 API</td></tr>
-      <tr><td>本质</td><td>临时指令</td><td>可复用的程序包</td><td>原子能力</td></tr>
-    </tbody>
-  </table>
+<h3>3.4 · 为什么这件事重要</h3>
+<p>因为"反复写同样的 prompt"是 AI 时代最大的隐性成本。Skill 让你<em>把一次性 prompt 升级成可复用资产</em>——它能跨人、跨项目、跨会话复用，还能被你持续维护。WorkBuddy 这类 Agent 把 Skill 作为一等公民，正是因为它们决定了一个 Agent 在你的工作流里<em>到底专不专业</em>。</p>
 
-  <h3>常见误区</h3>
-  <ul>
-    <li><strong>"Skill 就是写 prompt"。</strong>错。prompt 是 Skill 的一部分；Skill 是带 frontmatter、有触发逻辑、有 checklist 的完整包。</li>
-    <li><strong>"越多 Skill 越好"。</strong>错。每个 Skill 都会占上下文，写多了反而稀释主任务的可读性。</li>
-    <li><strong>"description 写不写都行"。</strong>错。<code>description</code> 决定"何时触发你"，写得模糊就等于让 Skill 永远不被使用。</li>
-    <li><strong>"Skill 能让模型变聪明"。</strong>不能。Skill 让模型"更稳"——同一道题反复做得到同样的好，但不能做它原本做不了的题。</li>
-  </ul>
-
-  <h2>6 · 代码级一瞥（一个最小可用的 Skill）</h2>
-  <pre><code>---
-name: weekly-report
-description: 生成本周工作总结的 Markdown。每周五下午、或用户说"周报"时使用。
+<h3>3.5 · 代码级一瞥（一个最小可用的 Skill）</h3>
+<pre><code># 文件：.workbuddy/skills/concept-learning-material/SKILL.md
+---
+name: concept-learning-material
+description: Generate a structured, visually rich single-file HTML
+  learning material for a given concept. Use when the user wants to
+  deeply understand or teach a single concept. Triggers: "生成学习资料",
+  "讲解 X", "concept learning material".
 ---
 
-# Weekly Report Generator
+# Concept Learning Material Generator
 
 ## When to use
-用户说"做周报"、"总结本周"、"weekly report"。
+- User: "Make a learning page for X"
+- User: "Teach me X"
 
 ## Inputs
-- 本周项目笔记（notes/week-N.md）
-- 用户的角色 / 团队（可选）
+- `concept` (required) — the concept to teach
+- `style_hint` (optional) — e.g. "for first-year students"
 
 ## Workflow
-1. 读取 notes/week-N.md。
-2. 按"做了什么 / 学到什么 / 下周计划"三段组织。
-3. 输出 Markdown，不要超过 400 字。
+1. Disambiguate the concept if its name has multiple meanings.
+2. Write 3–5 learning goals with verbs in the head.
+3. Write the structure section by section, anchored by an SVG.
+4. Run the quality checklist before saving.
 
 ## Quality checklist
-- [ ] 三段齐全，顺序固定。
-- [ ] 没有"当然可以"或"希望对您有帮助"这类客套话。
-- [ ] 时间表述统一（不混用"昨天/周一/9 月 1 日"）。
+- [ ] Page opens without external requests.
+- [ ] All 7 segments present and in order.
+- [ ] No invented sources.
 </code></pre>
-  <p>这就是一个 Skill 的最小完整样例。任何比这"更复杂但仍然是这八股"的 Skill，都站得住脚。</p>
+<p>这一份 Skill 共 25 行——但只要它在 WorkBuddy 中被检测到，凡是说"讲解 RAG 一下"的用户消息，它就会自动激活。</p>
 
-  <h2>7 · Recap & 自检</h2>
-  <details><summary>1. Skill 是什么物理形式？</summary>一个放在 <code>.workbuddy/skills/&lt;name&gt;/SKILL.md</code> 的 Markdown 文件，前后 --- 之间是 frontmatter，下面是正文。</details>
-  <details><summary>2. 决定 Skill 被触发的关键是什么？</summary>frontmatter 里的 <code>description</code>。它写明"用户讲哪类话时该用我"，写得越具体、越不撞车越好。</details>
-  <details><summary>3. 什么时候该考虑写一个 Skill？</summary>当你发现自己或 Agent 反复被同一个多步骤任务"卡住"，且每次都要在对话里重新解释一遍流程时。</details>
-  <details><summary>4. Skill 和 prompt 有什么区别？</summary>prompt 是一次性的指令；Skill 是带触发条件、有 workflow 与 checklist 的可复用程序包，写一次、跑多次。</details>
-  <details><summary>5. 为什么不"什么 Skill 都写"？</summary>Skill 占上下文位置，过多会稀释模型注意力。一般每项目 5–15 个 Skill 是健康规模。</details>
-  <details><summary>6. 项目级 Skill 和用户级 Skill 各适合什么场景？</summary>项目级 Skill 适合"只有这个项目需要"的流程（如打包作业提交）；用户级 Skill 适合"走到哪都管用"的个人偏好（如沟通语气、汇报模板）。</details>
+<h2><span class="num">4 ·</span>应用案例：把每周写周报这件痛苦事沉淀为 Skill</h2>
+<p><b>场景</b>：你是产品经理，每周五下午要写一份 800 字的周报——三大模块（本周进展、本周数据、风险 &amp; 需要协同）。过去 8 周，你每次都重新写一段 prompt，效果忽高忽低。</p>
+<p><b>第一步：把它当 Skill 写出来</b>。</p>
+<ul>
+  <li><b>name</b>: <code>weekly-pm-report</code></li>
+  <li><b>when to use</b>: "写本周周报 / 整理本周工作 / 帮我过一下 PM 周报的稿子"</li>
+  <li><b>inputs</b>: <code>raw_notes</code>（散落的项目笔记） + <code>goal_template</code>（你常用的结构）</li>
+  <li><b>workflow</b>:
+    <ol>
+      <li>按 KPI 视角把 raw_notes 重新分组；</li>
+      <li>每段给出"<em>状态 + 数字 + 决策点</em>"三件套；</li>
+      <li>把"风险"放最后一段并标红；</li>
+      <li>全文 600–900 字，过一次 SOP 里写的"客不客观检查"。</li>
+    </ol>
+  </li>
+  <li><b>quality checklist</b>: 数字有出处；不夸大；不要堆 emoji；不"赋能"。</li>
+</ul>
+<p><b>第二步：把它放到项目级 Skill 目录下，并提交到 Git</b>。</p>
+<p><b>结果</b>：从此你每周只需要把笔记贴进来，说一句"按 weekly-pm-report 跑一下"。Skill 负责把"上周的格式"重新长出来，<em>不用你再想"这次又该从什么角度写"</em>。这就是 Skill 的价值——把零散经验变成可复用流程。</p>
 
-  <h2>8 · 延伸阅读（可核查）</h2>
-  <ul>
-    <li>WorkBuddy 官方文档：<em>Skills · Overview</em> — <a href="https://www.workbuddy.cn/docs/workbuddy/Overview">workbuddy.cn/docs/workbuddy/Overview</a></li>
-    <li>Anthropic 工程博客：<em>Building effective agents</em>（含 Skills 与 Tools 对比一节）— <a href="https://www.anthropic.com/research/building-effective-agents">anthropic.com/research/building-effective-agents</a></li>
-    <li>OpenAI 官方文档：<em>Prompt engineering</em> 指南 — <a href="https://platform.openai.com/docs/guides/prompt-engineering">platform.openai.com/docs/guides/prompt-engineering</a></li>
-    <li>Wikipedia：<em>Prompt engineering</em> — <a href="https://en.wikipedia.org/wiki/Prompt_engineering">en.wikipedia.org/wiki/Prompt_engineering</a></li>
-    <li>本仓库示例：<code>.workbuddy/skills/concept-learning-material/SKILL.md</code></li>
-  </ul>
+<h2><span class="num">5 ·</span>概念辨析</h2>
 
-  <div class="footer">Generated by <code>concept-learning-material</code> skill · 2026-09</div>
+<h3>5.1 · Skill vs Prompt vs Agent vs Tool</h3>
+<table>
+<thead><tr><th>维度</th><th>Skill</th><th>Prompt</th><th>Agent</th><th>Tool</th></tr></thead>
+<tbody>
+<tr><td>本质</td><td>可复用的工作流文档</td><td>一次性输入</td><td>运行中的程序</td><td>可被调用的函数</td></tr>
+<tr><td>谁来写</td><td>人/作者</td><td>人</td><td>人/Skill/Agent 共同</td><td>开发者</td></tr>
+<tr><td>是否跨会话</td><td>是</td><td>否</td><td>取决于实现</td><td>是</td></tr>
+<tr><td>有副作用</td><td>取决于 Skill 是否要求 Agent 调工具</td><td>无</td><td>通常有</td><td>通常有</td></tr>
+<tr><td>谁能调</td><td>匹配触发词的 Agent</td><td>模型</td><td>用户/上层系统</td><td>Agent</td></tr>
+</tbody>
+</table>
+<p>最简单的口诀：<em>Prompt 是请求，Skill 是手册，Agent 是执行者，Tool 是硬件接口</em>。</p>
+
+<h3>5.2 · 常见误区</h3>
+<ul>
+  <li><b>"Skill = 万能 prompt 库"</b> — 一个 Skill 做一件事；做太多件事它会糊。</li>
+  <li><b>"description 越短越好"</b> — description 太短会让系统匹配不上，太长会让系统误匹配。</li>
+  <li><b>"Skill 可以写在对话里"</b> — 对话里的提示词不是 Skill，因为它不会跨会话被自动加载。</li>
+  <li><b>"Skill 一次写好就完事"</b> — 高价值 Skill 是会<em>随使用进化</em>的——常见失败模式应回写到 Quality checklist。</li>
+  <li><b>"用户级 Skill 和项目级 Skill 等价"</b> — 前者随你走，后者随项目走；放进项目目录等于告诉团队"这一手是这个项目的共识"。</li>
+</ul>
+
+<h2><span class="num">6 ·</span>自测问题</h2>
+
+<details><summary>Q1 · Skill 和 prompt 的根本区别是什么？</summary>
+Prompt 是<em>一次性</em>输入，寿命 = 一次对话；Skill 是<em>可复用</em>工作流，寿命 = 跨会话、跨用户。被匹配到的 Skill 会被注入上下文，被当作 SOP 来执行；prompt 只是被消费一次。
+</details>
+
+<details><summary>Q2 · 一个最小可用的 Skill 需要哪些字段？</summary>
+至少四件：① <code>name</code> / <code>description</code>（frontmatter）；② <b>when to use</b> 触发条件；③ <b>workflow</b> 工作流步骤；④ <b>quality checklist</b> 完成前自检。
+</details>
+
+<details><summary>Q3 · 什么时候放在 <code>~/.workbuddy/skills/</code>，什么时候放在仓库的 <code>.workbuddy/skills/</code>？</summary>
+用户级 (<code>~/.workbuddy/skills/</code>)：跨项目、与个人习惯强相关、与代码无关（如个人写作风格）；<br>
+项目级 (<code>&lt;repo&gt;/.workbuddy/skills/</code>)：与本项目业务强相关、应被团队成员共享。
+</details>
+
+<details><summary>Q4 · 为什么 Skill 应该尽量"专一"？</summary>
+描述越宽的 Skill，触发时越容易把无关任务拽进来；模型把"什么都做"的工作流塞进上下文后，输出的稳定性会下降。一个 Skill 一件事，几件事就用几个 Skill，是性价比最高的写法。
+</details>
+
+<details><summary>Q5 · Skill 既然写在文档里，那 Agent 是怎么"看见"它的？</summary>
+匹配阶段：系统拿用户消息和 Skill 的 description / 触发词做匹配；命中后把 Skill 正文注入 Agent 的上下文（系统提示增强或工具列表）。Skill 通过<em>被读进上下文</em>而生效。
+</details>
+
+<details><summary>Q6 · 一个 Skill 完成了第一次使用后，最值得做的"维护动作"是什么？</summary>
+把本次失败模式回写进 Quality checklist。这种"小本经营式"的迭代，比每季度大改一次更能让 Skill 越用越好。
+</details>
+
+<h2><span class="num">7 ·</span>参考来源</h2>
+<ul>
+  <li><a href="https://docs.anthropic.com/en/docs/agents-and-tools/agent-skills/overview" target="_blank" rel="noopener">Anthropic: Agent Skills overview</a></li>
+  <li><a href="https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills" target="_blank" rel="noopener">Anthropic Engineering: Equipping agents with skills</a></li>
+  <li><a href="https://docs.workbuddy.cn/" target="_blank" rel="noopener">WorkBuddy 官方文档（Overview &amp; Skill Authoring）</a></li>
+  <li><a href="https://en.wikipedia.org/wiki/Prompt_engineering" target="_blank" rel="noopener">Wikipedia: Prompt engineering</a></li>
+  <li><a href="https://en.wikipedia.org/wiki/Standard_operating_procedure" target="_blank" rel="noopener">Wikipedia: Standard operating procedure</a></li>
+  <li>本仓库实例：<a href="https://github.com/wenxiang1248/bigdata-ai-course/tree/main/.workbuddy/skills/concept-learning-material" target="_blank" rel="noopener"><code>.workbuddy/skills/concept-learning-material/SKILL.md</code></a></li>
+</ul>
+
+<div class="footer">Generated by <code>concept-learning-material</code> skill · 7 段学习闭环</div>
 
 </div>
 </body>

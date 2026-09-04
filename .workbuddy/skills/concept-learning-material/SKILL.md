@@ -1,11 +1,21 @@
 ---
 name: concept-learning-material
-description: Generate a structured, visually rich single-file HTML learning material for a given concept. Use when the user wants to deeply understand or teach a single concept (e.g. "Agent", "LLM context", "Skill", "RAG", "Transformer"). Triggers include phrases like "生成学习资料", "做一个学习页面", "教学页面", "讲解 X 这个概念", "concept learning material".
+description: Generate a structured, visually rich single-file HTML learning material for a given concept, following a personal 7-step learning design (学习目标 / 核心问题 / 结构化解释 / 应用案例 / 概念辨析 / 自测问题 / 参考来源). Use when the user wants to deeply understand, teach, or study a single concept (e.g. "Agent", "LLM context", "Skill", "RAG", "Transformer", "Mermaid", "向量检索"). Triggers include "生成学习资料", "做一个学习页面", "教学页面", "讲解 X 这个概念", "concept learning material", "自学 X".
 ---
 
 # Concept Learning Material Generator
 
-A reusable workflow that turns **one concept name** into a **single, self-contained HTML learning page** that reads like a personal study note: warm narrative on top, visual diagrams in the middle, mental-model recap at the bottom.
+A reusable personal-learning workflow. Hand it **one concept name** and it returns **one self-contained HTML page** that follows a deliberate 7-step learning loop, not a one-off explanation.
+
+The page is built so the learner (or the author's future self) can:
+
+- **know what they will learn** before reading
+- **frame the right questions** to interrogate the concept
+- **get a structured walk-through** anchored by a mental-model diagram
+- **see it work in one real scenario**
+- **tell it apart from neighbours** and avoid common mistakes
+- **test themselves** with self-check questions whose answers live on the page
+- **follow real sources** to go deeper later
 
 ## When to use
 
@@ -13,60 +23,116 @@ Trigger this skill when the user asks any of:
 
 - "Make a learning page for X" / "做一个 X 的学习资料"
 - "Teach me X" / "讲解 X" / "用一节课讲清楚 X"
+- "I want to self-study X" / "我想自学 X"
 - "Generate concept learning material for X"
 
-Do NOT trigger it for: project setup, code refactors, multi-concept comparisons (use a comparison skill), or anything that needs a running app.
+Do NOT trigger for: project setup, code refactors, multi-concept comparisons (use a comparison skill), or anything that needs a running app.
 
 ## Inputs
 
-| Field         | Required | Notes                                                            |
-|---------------|----------|------------------------------------------------------------------|
-| `concept`     | yes      | The single concept to teach. Keep it concrete and unambiguous.  |
-| `context`     | no       | 1–3 sentences: who is the learner, what is the goal.             |
-| `style_hint`  | no       | e.g. "first-year CS student", "with AI analogies", "in 10 min".  |
-| `output_path` | usually  | Default: `learning-materials/<slug>.html` in the project root.  |
+| Field         | Required | Notes                                                                |
+|---------------|----------|----------------------------------------------------------------------|
+| `concept`     | yes      | The single concept to teach. Concrete and unambiguous.              |
+| `context`     | no       | 1–3 sentences: who is the learner, what is the goal.                 |
+| `style_hint`  | no       | e.g. "first-year CS student", "with AI analogies", "in 10 minutes".  |
+| `output_path` | usually  | Default: `learning-materials/<slug>.html` in the project root.       |
 
 If `context` is missing, default to: **a curious CS undergrad who has used ChatGPT but doesn't yet know how the sausage is made.** Write at that level.
 
-## Output Contract
+## The learning design (why 7 segments, in this order)
 
-A single HTML file that **opens correctly in any modern browser with no external dependencies**:
+A learning page is not a blog post. It should mirror how a thoughtful student actually studies a concept. The page follows a fixed 7-step loop so the learner always knows where they are and what to do next:
 
-1. **Self-contained**: no `<script src>` to CDN, no `<link rel=stylesheet>` to remote. All CSS inline in `<style>`.
-2. **Inline SVG only** for diagrams. No external images, no `<img src=http…>`.
-3. **Light theme by default** (IDE Theme: light), with **dark text on light backgrounds**. If user explicitly asks dark, switch.
+```
+学习目标 (Goals)
+   │  "what will I be able to do after this"
+   ▼
+核心问题 (Driving questions)
+   │  "what are the questions that, if answered, mean I get it"
+   ▼
+结构化解释 (Structured explanation)
+   │  the meat: mental model, anatomy, how it works, code glimpse
+   ▼
+应用案例 (Applied scenario)
+   │  one concrete scene where the concept earns its keep
+   ▼
+概念辨析 (Disambiguation)
+   │  "what it is vs what it isn't", plus a misconceptions list
+   ▼
+自测问题 (Self-check)
+   │  questions the page itself answers, with collapsible answers
+   ▼
+参考来源 (Sources)
+      real, verifiable URLs to keep going
+```
+
+This is **deliberately** not the maximalist 10-section anatomy of a marketing-grade article. It is the minimum coherent set. If a segment would be empty or padding, it is better to say so ("see Q3 — no dedicated scenario is needed because …") than to fill it with fluff.
+
+### Reasons behind each segment
+
+- **学习目标** forces the author to commit to verbs ("能说出 / 能辨别 / 能用 / 能避开误区"). Without it, the page drifts into storytelling.
+- **核心问题** turns reading into answering. The 3–5 questions become the reader's private table of contents.
+- **结构化解释** is the only segment that allows SVG diagrams and code. Everything else is prose.
+- **应用案例** is required: a concept without one stays abstract.
+- **概念辨析** prevents the most common failure mode — confusing this concept with its neighbours (e.g. Agent vs Workflow vs RAG).
+- **自测问题** with collapsible answers turns passive reading into retrieval practice.
+- **参考来源** with real URLs gives the reader an off-ramp if they want to go further.
+
+## Output contract (hard constraints)
+
+The output is a single HTML file that opens correctly in any modern browser with no external dependencies.
+
+1. **Self-contained**: no `<script src>` to CDN, no `<link rel="stylesheet">` to remote. All CSS inline in `<style>`.
+2. **Inline SVG only** for diagrams. No external images.
+3. **Light theme by default** (IDE Theme: light), dark text on light backgrounds.
 4. **Chinese-language primary** text. English technical terms in parentheses on first use.
-5. **Viewport**: written for ~960px max-width centered reading column on desktop; readable on mobile.
+5. **Viewport**: written for ~960px max-width centered reading column; readable on mobile.
 6. **No JavaScript required** to view the content. Optional, very light JS is OK (e.g. copy buttons, tabs).
-7. **Filename**: lowercase kebab-case of concept in English. Examples: `agent.html`, `llm-context.html`, `skill.html`.
+7. **Filename**: lowercase kebab-case of the concept in English. Examples: `agent.html`, `llm-context.html`, `skill.html`, `transformer.html`.
 
-## Document Anatomy (page sections, in order)
+## Document anatomy — 7 segments in order
 
-Every learning page should have **all** of these sections, even if short. Think of it as a stable skeleton so the learner always knows where they are.
+Every page must contain exactly these seven sections in this order. Some may be short; none may be missing.
 
-1. **Hero** — Concept name (H1, large), one-sentence tagline, **at-a-glance card row** (4–6 mini facts: "类比 / 本质 / 关键组件 / 常见误区").
-2. **TL;DR** — 3 short bullets, each ≤ 22 chars, the kind you would write on a Post-it.
-3. **Mental model** — One inline SVG diagram that answers "what is it, really?" in a single picture. This is the page's anchor.
-4. **解剖 (Anatomy)** — A labeled breakdown with smaller SVG or styled boxes. Show the moving parts.
-5. **运作机制 (How it works, step by step)** — A numbered flow (3–6 steps) with a small SVG sequence diagram. Use Chinese for verbs.
-6. **对比与误区 (Compare & contrast)** — A small comparison table with a *near neighbor* (e.g. RAG vs Agent). Then a "常见误区" list of 3–4 misconceptions.
-7. **Code-level glimpse** (only if it adds value) — a minimal, commented code snippet (10–30 lines) showing the smallest viable example. Omit for purely conceptual concepts (e.g. "哲学概念"), but keep for engineering concepts.
-8. **Recap & self-check** — 4–6 self-check questions. The learner should be able to answer all of them from the page alone.
-9. **延伸阅读 / Further reading** — 3–5 high-signal links or paper names. Use real, well-known sources only (Wikipedia, arXiv, official docs, HuggingFace, Anthropic, OpenAI blog). Never invent URLs.
-10. **Footer** — one line: "Generated by `concept-learning-material` skill".
+### 1 · 学习目标 (Goals) — 3–5 bullets
+Verbs in the head: "能 **说出** …"、"能 **辨别** …"、"能 **动手** 写出最小示例"、"能 **避开** 常见误区". Each goal is one short line.
 
-## Content rules (hard constraints)
+### 2 · 核心问题 (Driving questions) — 3–5 questions
+Questions that, if you can answer them, mean you understand the concept. These double as the reader's mental checklist.
 
-- **No hallucinated facts.** If a number, year, paper, or product is mentioned, it must be **verifiable**. When in doubt, use a hedge ("约 2023 年前后", "业界普遍认为…").
+### 3 · 结构化解释 (Structured explanation)
+The meat of the page. May contain, in this order:
+- one anchor **mental-model diagram** (inline SVG) answering "what is it, really?"
+- **anatomy** breakdown (labeled SVG or styled boxes) — the moving parts
+- **how it works** — 3–6 numbered steps with a small sequence SVG
+- *optional* **code-level glimpse** — minimal, commented snippet (10–30 lines), only if it adds value
+For meta-concepts (e.g. "Skill", "Agent", "Context"), add a small **"为什么这件事重要"** mini-section.
+
+### 4 · 应用案例 (Applied scenario)
+**One** concrete scene: "假设你是 X，你要 Y，你会怎样用这个概念一步步解决它?" Mention a real domain (e-commerce, school grading, travel planning, knowledge base, etc.). Include the specific input, decision points, and outcome.
+
+### 5 · 概念辨析 (Disambiguation)
+- A short comparison table with **one near-neighbour** (e.g. Agent vs Workflow; Skill vs Prompt; Context vs Token).
+- A **常见误区** list of 3–4 misconceptions with one-line corrections.
+
+### 6 · 自测问题 (Self-check) — 4–6 questions
+Each question is a `<details><summary>` block. The summary is the question; the body is the answer. Every question must be **answered by content above it**. Never add a question whose answer isn't on the page.
+
+### 7 · 参考来源 (Sources) — 4–6 URLs
+Only well-known sources: Wikipedia, official docs (Anthropic, OpenAI, GitHub, Hugging Face), arXiv papers with verifiable titles, university course pages. **No invented URLs.** Use real anchors (`<a href="…">`).
+
+## Content rules
+
+- **No hallucinated facts.** Numbers, years, papers, products must be verifiable. Hedge when unsure ("约 2023 年前后", "业界普遍认为…").
 - **Define jargon on first use** in one short clause: "Embedding（把文本映射到一个向量空间的表示）".
-- **Use at least one concrete analogy** for every abstract concept. Good analogies: kitchen, orchestra, library, factory assembly line, postal system, restaurant.
-- **No marketing tone.** No "颠覆性", "赋能", "革命性". Plain, warm, precise.
+- **At least one concrete analogy** for every abstract concept. Repertoire: kitchen, orchestra, library, factory line, postal system, restaurant, exam.
+- **No marketing tone.** No "颠覆性", "赋能", "革命性".
 - **Length**: 1,800–3,500 Chinese characters of body text. The page is meant to be read in 8–12 minutes.
-- **For meta-concepts** (e.g. "Skill", "Agent", "Context"): also include a **"为什么这件事重要 / Why this matters"** mini-section after TL;DR. Because meta-concepts only earn their page if the reader walks away caring.
+- **Pick one anchor mental model.** Don't show three competing diagrams. If the concept has multiple valid framings, choose the one you can defend in one sentence.
 
 ## Visual / design system
 
-Use the following tokens. Inline them as CSS variables in `<style>`.
+Use the following tokens. Inline as CSS variables in `<style>`.
 
 ```css
 :root {
@@ -94,35 +160,39 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
 
 **Component patterns:**
 
-- **At-a-glance card row**: a CSS grid `repeat(auto-fit, minmax(150px, 1fr))`, each card uses `--surface`, border 1px solid `--line`, radius `--radius`, small label + value.
-- **Diagram block**: a `<figure>` with an inline `<svg viewBox="0 0 680 360">` and a `<figcaption>`. Never use a remote image.
-- **Comparison table**: clean 2-column "A vs B" with a header row using `--accent` background; use `<table>` semantics.
-- **Code block**: `<pre><code>` with `--code-bg` background, 13.5px font, no syntax highlighter dependency (escape `<` and `&`).
-- **Self-check**: use `<details><summary>` so the answers are collapsible but accessible by default.
+- **Segment section header**: H2 with a small ordinal badge, e.g. `1 · 学习目标`. Use a uniform `letter-spacing: .04em` for the number.
+- **At-a-glance card row** (optional, in hero): CSS grid `repeat(auto-fit, minmax(150px, 1fr))`, each card uses `--surface`, border 1px solid `--line`, radius `--radius`, small label + value.
+- **Diagram block**: `<figure>` with an inline `<svg viewBox="0 0 680 360">` and a `<figcaption>`. Always self-contained.
+- **Comparison table**: 2-column or 3-column table, header row with `--accent` tint, semantic `<table>`.
+- **Code block**: `<pre><code>` with `--code-bg` background, 13.5px font, no external highlighter (escape `<` and `&`).
+- **Self-check**: `<details><summary>` so answers are collapsible by default, still accessible without JS.
 
 ## Workflow (do this every invocation)
 
-1. **Confirm the concept is unambiguous.** If a name could mean several things (e.g. "context"), pick the one relevant to the user and *say so* at the top of the page ("这里指 LLM 上下文窗口内的提示与历史。").
-2. **Sketch the diagram first.** Decide what the one Mental-model SVG will show. Then derive the smaller SVGs from it.
-3. **Write the TL;DR** before anything else. If you can't write 3 sharp TL;DR bullets, you don't yet understand the concept well enough — go back and clarify.
-4. **Write the page**, section by section, in the order in the Anatomy list above. Don't reorder.
-5. **Self-check pass**: open the HTML mentally, walk through the 4–6 self-check questions, verify each is answered by the page.
-6. **Save** to the path (default `learning-materials/<slug>.html`). If the directory doesn't exist, create it.
-7. **Verify** by re-reading the file. No `<?` artifacts, no half-substituted placeholders, no broken `<style>` blocks.
+1. **Disambiguate the concept.** If a name could mean several things (e.g. "context"), pick one and *say so* in the goals segment.
+2. **Write the 3–5 学习目标 first.** If you cannot write them, the concept is too fuzzy — ask the user or pick a narrower concept.
+3. **Write the 3–5 核心问题 next.** These drive the structure of segment 3.
+4. **Sketch the mental-model SVG** before writing prose. The diagram commits you to a single framing.
+5. **Write segments 3 → 4 → 5 → 6 in order.** Keep self-check answers short (1–3 sentences each).
+6. **Fill 参考来源 with real URLs only.** If a URL would be invented, replace it with a publication or official doc title.
+7. **Self-check pass**: open the HTML mentally, walk through each 自测问题, verify it is answered by content above.
+8. **Save** to `learning-materials/<slug>.html`. Create the directory if missing.
+9. **Verify** by re-reading the file: no `<?` artifacts, no half-substituted placeholders, no broken `<style>` blocks.
 
 ## Quality checklist before declaring done
 
-Run through this list. If any item fails, fix before presenting:
+Tick every item. If any item fails, fix before presenting.
 
 - [ ] Page opens in a fresh browser tab with no console errors, no external requests.
-- [ ] H1 is the concept name. Tagline is one sentence.
-- [ ] At least one inline SVG diagram, fully self-contained.
-- [ ] All 10 anatomy sections are present (some may be short, none may be missing).
+- [ ] H1 is the concept name, with a one-sentence tagline.
+- [ ] **Exactly 7 segments**, in order: 学习目标 / 核心问题 / 结构化解释 / 应用案例 / 概念辨析 / 自测问题 / 参考来源.
+- [ ] At least one inline SVG diagram, fully self-contained, anchored in the 结构化解释 segment.
+- [ ] 应用案例 mentions a specific domain, input, decision point, and outcome.
+- [ ] All 自测问题 have answers visible on the page above them.
+- [ ] 参考来源 has 4–6 real, clickable URLs — no invented links.
 - [ ] Chinese primary text, English technical terms in parentheses on first use.
-- [ ] No invented papers, URLs, version numbers, or statistics.
 - [ ] Body text 1,800–3,500 Chinese characters.
-- [ ] Self-check questions are actually answered in the page above them.
-- [ ] Filename is kebab-case English; matches the concept.
+- [ ] Filename is kebab-case English; matches the concept slug.
 - [ ] No leftover `{{template}}` placeholders, no LLM fingerprint phrases ("当然可以！", "希望对您有帮助").
 
 ## Style block — copy-pasteable starter
@@ -146,8 +216,10 @@ Every generated page should start its `<style>` with this base. Extend as needed
     font-size: 16px; line-height: 1.75; }
   .wrap { max-width: var(--maxw); margin: 0 auto; padding: 56px 28px 96px; }
   h1 { font-size: 40px; letter-spacing: -0.5px; margin: 0 0 8px; }
-  h2 { font-size: 24px; margin: 48px 0 14px; padding-bottom: 8px;
+  h2 { font-size: 22px; margin: 48px 0 14px; padding-bottom: 8px;
        border-bottom: 1px solid var(--line); }
+  h2 .num { color: var(--muted); font-weight: 500; margin-right: 10px;
+            letter-spacing: .04em; }
   h3 { font-size: 18px; margin: 24px 0 8px; color: var(--accent); }
   p { margin: 12px 0; }
   .tagline { color: var(--ink-2); font-size: 17px; margin: 0 0 28px; }
@@ -184,13 +256,16 @@ Every generated page should start its `<style>` with this base. Extend as needed
 
 ## Examples of good invocations
 
-- "用 concept-learning-material 给我生成 Agent 的学习资料，输出到 learning-materials/agent.html"
-- "用 concept-learning-material 解释一下 LLM 的上下文窗口，给有 ML 基础但没用过大模型框架的同学看"
+- "用 concept-learning-material 给我自学 RAG，输出到 learning-materials/rag.html"
+- "用 concept-learning-material 解释一下 Transformer，给有 ML 基础但没用过大模型框架的同学看"
 - "用 concept-learning-material 讲清楚 Skill 是什么，目标是 WorkBuddy 用户"
+- "用 concept-learning-material 学习一下 Mermaid 语法，半小时内能上手"
 
 ## Failure modes to watch for
 
-- **Going past 3,500 Chinese characters** — prune, don't pad.
-- **Diagrams that aren't actually diagrams** — a styled `<div>` is not a diagram. If you draw it with `<svg>`, you must encode the relationships with real shapes, lines, arrows.
+- **Going past 3,500 Chinese characters** — prune, don't pad. Trim SVG before prose.
+- **Diagrams that aren't actually diagrams** — a styled `<div>` is not a diagram. If you draw it with SVG, encode the relationships with real shapes, lines, arrows.
 - **Inventing sources** — only link to things you can name without thinking (Wikipedia, GitHub docs, official blogs, papers with known titles).
-- **Drifting into a tutorial** — this is a *learning page*, not a how-to. The Code-level glimpse section is the *one* allowed exception.
+- **Drifting into a tutorial** — this is a *learning page*, not a how-to. Only segment 3 may host a small code glimpse.
+- **Skipping 学习目标** to jump straight into explanation — almost always a sign the author hasn't decided what the page is for.
+- **Self-check questions whose answers aren't on the page** — a cheap signal that the page is unstructured.
